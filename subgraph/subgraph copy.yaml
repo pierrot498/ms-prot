@@ -1,0 +1,134 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: MSFactory
+    network: localhost
+    source:
+      abi: MSFactory
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ProxyDeployed
+      abis:
+        - name: MSFactory
+          file: ./abis/MSFactory.json
+        - name: MSDropERC721
+          file: ./abis/MSDropERC721.json
+      eventHandlers:
+        - event: ProxyDeployed(indexed address,address,indexed address)
+          handler: handleProxyDeployed
+      file: ./src/ms-factory.ts
+  - kind: ethereum
+    name: MSMarketplace
+    network: localhost
+    source:
+      abi: MSMarketplace
+      address: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AuctionClosed
+        - ListingAdded
+        - ListingRemoved
+        - ListingUpdated
+        - NewAcceptOffer
+        - NewBidOffer
+        - NewOffer
+        - NewSale
+      abis:
+        - name: MSMarketplace
+          file: ./abis/MSMarketplace.json
+      eventHandlers:
+        - event: AuctionClosed(indexed uint256,indexed address,indexed
+            bool,address,address)
+          handler: handleAuctionClosed
+        - event: ListingAdded(indexed uint256,indexed address,indexed
+            address,(uint256,address,address,uint256,uint256,uint256,uint256,address,uint256,uint256,uint8,uint8))
+          handler: handleListingAdded
+        - event: ListingRemoved(indexed uint256,indexed address)
+          handler: handleListingRemoved
+        - event: NewAcceptOffer(indexed uint256,indexed address,indexed
+            address,address,uint256,uint256)
+          handler: handleNewAcceptOffer
+        - event: NewBidOffer(indexed uint256,indexed address,indexed
+            uint8,uint256,uint256,address,uint256)
+          handler: handleNewBidOffer
+        - event: NewOffer(indexed address,indexed uint256,indexed
+            address,uint256,uint256,address)
+          handler: handleNewOffer
+        - event: NewSale(indexed uint256,indexed address,indexed
+            address,address,uint256,uint256)
+          handler: handleNewSale
+        - event: ListingUpdated(indexed
+            uint256,(uint256,address,address,uint256,uint256,uint256,uint256,address,uint256,uint256,uint8,uint8))
+          handler: handleListingUpdated
+      file: ./src/ms-marketplace.ts
+  - kind: ethereum
+    name: MSDropMarketplace
+    network: localhost
+    source:
+      abi: MSDropMarketplace
+      address: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DropAuctionClosed
+        - DropListingAdded
+        - DropListingUpdated
+        - NewDropBidOffer
+      abis:
+        - name: MSDropMarketplace
+          file: ./abis/MSDropMarketplace.json
+      eventHandlers:
+        - event: DropAuctionClosed(indexed uint256,indexed address,indexed
+            bool,address,address)
+          handler: handleDropAuctionClosed
+        - event: DropListingAdded(indexed uint256,indexed address,indexed
+            address,(uint256,address,address,uint256,uint256,uint256,uint256,address,uint256,uint256,uint8,uint8,(bool,uint256,address)))
+          handler: handleDropListingAdded
+        - event: DropListingUpdated(indexed
+            uint256,(uint256,address,address,uint256,uint256,uint256,uint256,address,uint256,uint256,uint8,uint8,(bool,uint256,address)))
+          handler: handleDropListingUpdated
+        - event: NewDropBidOffer(indexed uint256,indexed address,indexed
+            uint8,uint256,uint256,address,uint256)
+          handler: handleNewDropBidOffer
+      file: ./src/ms-drop-marketplace.ts
+templates:
+  - kind: ethereum
+    name: MSDropERC721
+    network: localhost
+    source:
+      abi: MSDropERC721
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - NftContract
+      abis:
+        - name: MSDropERC721
+          file: ./abis/MSDropERC721.json
+      eventHandlers:
+        - event: TokensLazyMinted(uint256,uint256,string,indexed address)
+          handler: handleTokensLazyMinted
+        - event: ClaimConditionsUpdated((uint256,uint256,uint256,uint256,uint256,bytes32,uint256,address)[])
+          handler: handleClaimConditionsUpdated
+        - event: TokensClaimed(indexed uint256,indexed address,indexed
+            address,uint256,uint256)
+          handler: handleTokensClaimed
+        - event: TokensAdminClaimed(indexed address,address,uint256,uint256)
+          handler: handleTokensAdminClaimed
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+      file: ./src/ms-drop-erc721.ts

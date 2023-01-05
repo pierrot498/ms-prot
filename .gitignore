@@ -1,0 +1,17 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+data
+
+#Hardhat files
+cache
+artifacts
+
+# Subgraph
+./subgraph/generated
+./subgraph/build
+# Matchstick
+./subgraph/tests/.*

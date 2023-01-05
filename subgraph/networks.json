@@ -1,0 +1,27 @@
+{
+  "localhost": {
+    "MSMarketplace": {
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+    },
+    "MSDropMarketplace": {
+      "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+    },
+    "MSFactory": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    }
+  },
+  "goerli": {
+    "MSFactory": {
+      "address": "0x13Ce255345Ab0F381aCd80731a2Fc22c6774b727",
+      "startBlock": 8128645
+    },
+    "MSMarketplace": {
+      "address": "0x7Ab447D9D1562F0aE56431D0Cd2C3332EB4d6A87",
+      "startBlock": 8128645
+    },
+    "MSDropMarketplace": {
+      "address": "0x12f6682CABFC771214157CAa27cDA1E8b68eD7f7",
+      "startBlock": 8128645
+    }
+  }
+}
