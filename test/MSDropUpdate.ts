@@ -456,6 +456,9 @@ describe("MSDrop721V2", function() {
       0,
       { value: ethers.utils.parseEther("0.2") }
     );
+
+    //should be able to transfert
+    await msDrop721.transferFrom(defaultAdmin, forwarder, 1);
   });
 
   it("Shouldn't be able to transfer when physical", async function test() {
