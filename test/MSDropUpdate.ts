@@ -69,7 +69,7 @@ describe("MSDrop721V2", function() {
     let lazy = await lazyToken.wait();
 
     const token = await msDrop721.adminClaim(defaultAdmin, 1, 1);
-
+    //blacklist an address
     await msDrop721.blacklist(forwarder, true);
     await expect(
       msDrop721.setApprovalForAll(forwarder, true)
@@ -456,5 +456,54 @@ describe("MSDrop721V2", function() {
       0,
       { value: ethers.utils.parseEther("0.2") }
     );
+  });
+
+  it("Shouldn't be able to transfer when physical", async function test() {
+    let claimCondition = [
+      1670418429,
+      10,
+      1,
+      1,
+      1,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      ethers.utils.parseEther("0.1"),
+      currency,
+    ];
+    //First 10 tokens will have ipfs://id as uri
+    const lazyToken = await msDrop721.lazyMint(
+      10,
+      "ipfs://",
+      false,
+      true,
+      0,
+      [claimCondition],
+      false,
+      false
+    );
+
+    let lazy = await lazyToken.wait();
+
+    //claim on first edition
+    const claim = await msDrop721.claim(
+      defaultAdmin,
+      [1, 1, ethers.utils.parseEther("0.1")],
+      currency,
+      ["0x0000000000000000000000000000000000000000000000000000000000000000"],
+      0,
+      { value: ethers.utils.parseEther("0.1") }
+    );
+
+    //Physical asset shouldn't be able to be be transfered if not scanned
+    await expect(
+      msDrop721.transferFrom(defaultAdmin, forwarder, 1)
+    ).to.be.rejectedWith("Not scanned");
+    await expect(await msDrop721.ownerOf(1)).to.be.equal(defaultAdmin);
+
+    //Scan physical asset
+    await msDrop721.setScanned(1);
+
+    //should be ableto transfer
+    await msDrop721.transferFrom(defaultAdmin, forwarder, 1);
+    await expect(await msDrop721.ownerOf(1)).to.be.equal(forwarder);
   });
 });
