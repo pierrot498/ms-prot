@@ -8,10 +8,10 @@ import "@graphprotocol/hardhat-graph";
 dotenv.config();
 
 const privateKey = process.env.PRIVATE_KEY || "";
-const alchemyKey = process.env.ALCHEMY_KEY;
-const etherscanKey = process.env.ETHERSCAN_KEY;
-const msAlchemyURL = process.env.MS_ALCHEMY_URL;
-const msAlchemyGoerliURL = process.env.MS_ALCHEMY_GOERLI_URL;
+const alchemyKey = process.env.ALCHEMY_KEY || "";
+const etherscanKey = process.env.ETHERSCAN_KEY || "";
+const msAlchemyURL = process.env.MS_ALCHEMY_URL || "";
+const msAlchemyGoerliURL = process.env.MS_ALCHEMY_GOERLI_URL || "";
 
 const config = {
   paths: {
@@ -32,7 +32,7 @@ const config = {
       },
       optimizer: {
         enabled: true,
-        runs: 300,
+        runs: 200,
       },
     },
   },
@@ -44,12 +44,6 @@ const config = {
     apiKey: etherscanKey,
   },
   networks: {
-    goerli: {
-      chainId: 5,
-      url: msAlchemyGoerliURL,
-      //gasPrice: 300000000000,
-      accounts: [privateKey],
-    },
     localhost: {
       url: "http://0.0.0.0:8545",
     },

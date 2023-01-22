@@ -1,0 +1,25 @@
+name: CI/CD Actions Workflow
+on: [push, pull_request]
+env:
+  WORKING_DIR: src
+jobs:
+  local_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.8.0]
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install Node.js dependencies for smart contract project
+        run: npm ci
+
+      - name: Run smart contract tests
+        run: npx hardhat test
