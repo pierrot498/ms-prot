@@ -74,7 +74,10 @@ interface IMSDropERC721 is IERC721Upgradeable, IDropClaimCondition {
      */
     function lazyMint(
         uint256 amount,
-        string calldata baseURIForTokens
+        string calldata baseURIForTokens,
+        bool _isAuction,
+        bool _isPhysic,
+        uint256 _reservePrice,ClaimCondition[] calldata phases, bool resetClaimEligibility, bool
     ) external;
 
     function claim(
@@ -93,5 +96,5 @@ interface IMSDropERC721 is IERC721Upgradeable, IDropClaimCondition {
      *                               `limitMerkleProofClaim` values when setting new
      *                               claim conditions.
      */
-    function setClaimConditions(ClaimCondition[] calldata phases, bool resetClaimEligibility) external;
+    //function setClaimConditions(uint256 index,ClaimCondition[] calldata phases, bool resetClaimEligibility) internal;
 }

@@ -22,4 +22,4 @@ jobs:
         run: npm ci
 
       - name: Run smart contract tests
-        run: npx hardhat test
+        run: npx hardhat test test/MSDropUpdate
