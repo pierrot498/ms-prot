@@ -31,7 +31,10 @@ contract Permissions is IPermissions {
      *  @param role     keccak256 hash of the role. e.g. keccak256("TRANSFER_ROLE")
      *  @param account  Address of the account for which the role is being checked.
      */
-    function hasRole(bytes32 role, address account) public view override returns (bool) {
+    function hasRole(
+        bytes32 role,
+        address account
+    ) public view override returns (bool) {
         return _hasRole[role][account];
     }
 
@@ -49,7 +52,10 @@ contract Permissions is IPermissions {
      *  @param role     keccak256 hash of the role. e.g. keccak256("TRANSFER_ROLE")
      *  @param account  Address of the account for which the role is being checked.
      */
-    function hasRoleWithSwitch(bytes32 role, address account) public view returns (bool) {
+    function hasRoleWithSwitch(
+        bytes32 role,
+        address account
+    ) public view returns (bool) {
         if (!_hasRole[role][address(0)]) {
             return _hasRole[role][account];
         }
@@ -64,7 +70,9 @@ contract Permissions is IPermissions {
      *
      *  @param role     keccak256 hash of the role. e.g. keccak256("TRANSFER_ROLE")
      */
-    function getRoleAdmin(bytes32 role) external view override returns (bytes32) {
+    function getRoleAdmin(
+        bytes32 role
+    ) external view override returns (bytes32) {
         return _getRoleAdmin[role];
     }
 
@@ -105,7 +113,10 @@ contract Permissions is IPermissions {
      *  @param role     keccak256 hash of the role. e.g. keccak256("TRANSFER_ROLE")
      *  @param account  Address of the account from which the role is being revoked.
      */
-    function renounceRole(bytes32 role, address account) public virtual override {
+    function renounceRole(
+        bytes32 role,
+        address account
+    ) public virtual override {
         if (msg.sender != account) {
             revert("Can only renounce for self");
         }
@@ -149,7 +160,10 @@ contract Permissions is IPermissions {
     }
 
     /// @dev Checks `role` for `account`. Reverts with a message including the required role.
-    function _checkRoleWithSwitch(bytes32 role, address account) internal view virtual {
+    function _checkRoleWithSwitch(
+        bytes32 role,
+        address account
+    ) internal view virtual {
         if (!hasRoleWithSwitch(role, account)) {
             revert(
                 string(

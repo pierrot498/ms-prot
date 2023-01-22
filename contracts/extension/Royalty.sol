@@ -31,7 +31,10 @@ abstract contract Royalty is IRoyalty {
      *  @return receiver        Address of royalty recipient account.
      *  @return royaltyAmount   Royalty amount calculated at current royaltyBps value.
      */
-    function royaltyInfo(uint256 tokenId, uint256 salePrice)
+    function royaltyInfo(
+        uint256 tokenId,
+        uint256 salePrice
+    )
         external
         view
         virtual
@@ -48,7 +51,9 @@ abstract contract Royalty is IRoyalty {
      *  @dev             Returns royalty recipient and bps for `_tokenId`.
      *  @param _tokenId  The tokenID of the NFT for which to query royalty info.
      */
-    function getRoyaltyInfoForToken(uint256 _tokenId) public view override returns (address, uint16) {
+    function getRoyaltyInfoForToken(
+        uint256 _tokenId
+    ) public view override returns (address, uint16) {
         RoyaltyInfo memory royaltyForToken = royaltyInfoForToken[_tokenId];
 
         return
@@ -60,7 +65,12 @@ abstract contract Royalty is IRoyalty {
     /**
      *  @notice Returns the defualt royalty recipient and BPS for this contract's NFTs.
      */
-    function getDefaultRoyaltyInfo() external view override returns (address, uint16) {
+    function getDefaultRoyaltyInfo()
+        external
+        view
+        override
+        returns (address, uint16)
+    {
         return (royaltyRecipient, uint16(royaltyBps));
     }
 
@@ -73,7 +83,10 @@ abstract contract Royalty is IRoyalty {
      *  @param _royaltyRecipient   Address to be set as default royalty recipient.
      *  @param _royaltyBps         Updated royalty bps.
      */
-    function setDefaultRoyaltyInfo(address _royaltyRecipient, uint256 _royaltyBps) external override {
+    function setDefaultRoyaltyInfo(
+        address _royaltyRecipient,
+        uint256 _royaltyBps
+    ) external override {
         if (!_canSetRoyaltyInfo()) {
             revert("Not authorized");
         }
@@ -82,7 +95,10 @@ abstract contract Royalty is IRoyalty {
     }
 
     /// @dev Lets a contract admin update the default royalty recipient and bps.
-    function _setupDefaultRoyaltyInfo(address _royaltyRecipient, uint256 _royaltyBps) internal {
+    function _setupDefaultRoyaltyInfo(
+        address _royaltyRecipient,
+        uint256 _royaltyBps
+    ) internal {
         if (_royaltyBps > 10_000) {
             revert("Exceeds max bps");
         }
@@ -124,7 +140,10 @@ abstract contract Royalty is IRoyalty {
             revert("Exceeds max bps");
         }
 
-        royaltyInfoForToken[_tokenId] = RoyaltyInfo({ recipient: _recipient, bps: _bps });
+        royaltyInfoForToken[_tokenId] = RoyaltyInfo({
+            recipient: _recipient,
+            bps: _bps
+        });
 
         emit RoyaltyForToken(_tokenId, _recipient, _bps);
     }

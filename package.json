@@ -12,7 +12,9 @@
     "graph-local": "docker-compose up",
     "graph-local-clean": "docker-compose down -v && docker-compose rm -v && rm -rf data/ipfs data/postgres",
     "create-local": "graph create --node http://127.0.0.1:8020 mondesingulier",
-    "deploy-local": "cd ./subgraph && graph deploy --ipfs http://127.0.0.1:5001 --node http://127.0.0.1:8020 mondesingulier --network"
+    "deploy-local": "cd ./subgraph && graph deploy --ipfs http://127.0.0.1:5001 --node http://127.0.0.1:8020 mondesingulier --network",
+    "solhint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
+    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
   },
   "author": "",
   "license": "ISC",
@@ -24,7 +26,11 @@
     "dotenv": "^16.0.3",
     "erc721a-upgradeable": "^4.2.3",
     "ethers": "^5.7.2",
-    "hardhat": "^2.12.3"
+    "hardhat": "^2.12.3",
+    "prettier": "^2.8.3",
+    "prettier-plugin-solidity": "^1.1.1",
+    "solhint": "^3.3.8",
+    "solhint-plugin-prettier": "^0.0.5"
   },
   "dependencies": {
     "@graphprotocol/hardhat-graph": "^0.1.0-alpha.2",

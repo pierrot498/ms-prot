@@ -25,7 +25,7 @@ import "../extension/interface/IPrimarySale.sol";
 import "../extension/interface/IRoyalty.sol";
 import "../extension/interface/IOwnable.sol";
 
-import { IMSDropERC1155 } from "../interfaces/drop/IMSDropERC1155.sol";
+import {IMSDropERC1155} from "../interfaces/drop/IMSDropERC1155.sol";
 
 import "../openzeppelin-presets/metatx/ERC2771ContextUpgradeable.sol";
 
@@ -206,10 +206,18 @@ contract MSDropERC1155 is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Returns the URI for a given tokenId.
-    function uri(uint256 _tokenId) public view override returns (string memory _dropTokenURI) {
+    function uri(
+        uint256 _tokenId
+    ) public view override returns (string memory _dropTokenURI) {
         for (uint256 i = 0; i < baseURIIndices.length; i += 1) {
             if (_tokenId < baseURIIndices[i]) {
-                return string(abi.encodePacked(baseURI[baseURIIndices[i]], _tokenId.toString()));
+                return
+                    string(
+                        abi.encodePacked(
+                            baseURI[baseURIIndices[i]],
+                            _tokenId.toString()
+                        )
+                    );
             }
         }
 
@@ -217,23 +225,30 @@ contract MSDropERC1155 is
     }
 
     /// @dev See ERC 165
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         virtual
-        override(ERC1155Upgradeable, AccessControlEnumerableUpgradeable, IERC165Upgradeable, IERC165)
+        override(
+            ERC1155Upgradeable,
+            AccessControlEnumerableUpgradeable,
+            IERC165Upgradeable,
+            IERC165
+        )
         returns (bool)
     {
-        return super.supportsInterface(interfaceId) || type(IERC2981Upgradeable).interfaceId == interfaceId;
+        return
+            super.supportsInterface(interfaceId) ||
+            type(IERC2981Upgradeable).interfaceId == interfaceId;
     }
 
     /// @dev Returns the royalty recipient and amount, given a tokenId and sale price.
-    function royaltyInfo(uint256 tokenId, uint256 salePrice)
-        external
-        view
-        virtual
-        returns (address receiver, uint256 royaltyAmount)
-    {
+    function royaltyInfo(
+        uint256 tokenId,
+        uint256 salePrice
+    ) external view virtual returns (address receiver, uint256 royaltyAmount) {
         (address recipient, uint256 bps) = getRoyaltyInfoForToken(tokenId);
         receiver = recipient;
         royaltyAmount = (salePrice * bps) / MAX_BPS;
@@ -247,7 +262,10 @@ contract MSDropERC1155 is
      *  @dev Lets an account with `MINTER_ROLE` lazy mint 'n' NFTs.
      *       The URIs for each token is the provided `_baseURIForTokens` + `{tokenId}`.
      */
-    function lazyMint(uint256 _amount, string calldata _baseURIForTokens) external onlyRole(MINTER_ROLE) {
+    function lazyMint(
+        uint256 _amount,
+        string calldata _baseURIForTokens
+    ) external onlyRole(MINTER_ROLE) {
         uint256 startId = nextTokenIdToMint;
         uint256 baseURIIndex = startId + _amount;
 
@@ -255,7 +273,12 @@ contract MSDropERC1155 is
         baseURI[baseURIIndex] = _baseURIForTokens;
         baseURIIndices.push(baseURIIndex);
 
-        emit TokensLazyMinted(startId, startId + _amount - 1, _baseURIForTokens, royaltyRecipient);
+        emit TokensLazyMinted(
+            startId,
+            startId + _amount - 1,
+            _baseURIForTokens,
+            royaltyRecipient
+        );
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -263,10 +286,10 @@ contract MSDropERC1155 is
     //////////////////////////////////////////////////////////////*/
 
     function adminClaim(
-        address _receiver, 
-        uint256 _tokenId, 
+        address _receiver,
+        uint256 _tokenId,
         uint256 _quantity
-        ) external onlyRole(MINTER_ROLE) {
+    ) external onlyRole(MINTER_ROLE) {
         verifyAdminClaim(_tokenId, _quantity);
 
         _mint(_receiver, _tokenId, _quantity, "");
@@ -274,8 +297,10 @@ contract MSDropERC1155 is
         emit TokensAdminClaimed(_tokenId, _msgSender(), _receiver, _quantity);
     }
 
-    function verifyAdminClaim(uint256 _tokenId, uint256 _quantity) public view virtual {
-
+    function verifyAdminClaim(
+        uint256 _tokenId,
+        uint256 _quantity
+    ) public view virtual {
         require(_tokenId < nextTokenIdToMint, "invalid id");
 
         require(_quantity > 0, "invalid quantity claimed.");
@@ -295,7 +320,10 @@ contract MSDropERC1155 is
         bytes32[] calldata _proofs,
         uint256 _proofMaxQuantityPerTransaction
     ) external payable nonReentrant {
-        require(isTrustedForwarder(msg.sender) || _msgSender() == tx.origin, "BOT");
+        require(
+            isTrustedForwarder(msg.sender) || _msgSender() == tx.origin,
+            "BOT"
+        );
 
         // Get the active claim condition index.
         uint256 activeConditionId = getActiveClaimConditionId(_tokenId);
@@ -308,20 +336,25 @@ contract MSDropERC1155 is
          */
 
         // Verify inclusion in allowlist.
-        (bool validMerkleProof, uint256 merkleProofIndex) = verifyClaimMerkleProof(
-            activeConditionId,
-            _msgSender(),
-            _tokenId,
-            _quantity,
-            _proofs,
-            _proofMaxQuantityPerTransaction
-        );
+        (
+            bool validMerkleProof,
+            uint256 merkleProofIndex
+        ) = verifyClaimMerkleProof(
+                activeConditionId,
+                _msgSender(),
+                _tokenId,
+                _quantity,
+                _proofs,
+                _proofMaxQuantityPerTransaction
+            );
 
         // Verify claim validity. If not valid, revert.
         // when there's allowlist present --> verifyClaimMerkleProof will verify the _proofMaxQuantityPerTransaction value with hashed leaf in the allowlist
         // when there's no allowlist, this check is true --> verifyClaim will check for _quantity being less/equal than the limit
-        bool toVerifyMaxQuantityPerTransaction = _proofMaxQuantityPerTransaction == 0 ||
-            claimCondition[_tokenId].phases[activeConditionId].merkleRoot == bytes32(0);
+        bool toVerifyMaxQuantityPerTransaction = _proofMaxQuantityPerTransaction ==
+                0 ||
+                claimCondition[_tokenId].phases[activeConditionId].merkleRoot ==
+                bytes32(0);
         verifyClaim(
             activeConditionId,
             _msgSender(),
@@ -337,16 +370,29 @@ contract MSDropERC1155 is
              *  Mark the claimer's use of their position in the allowlist. A spot in an allowlist
              *  can be used only once.
              */
-            claimCondition[_tokenId].limitMerkleProofClaim[activeConditionId].set(merkleProofIndex);
+            claimCondition[_tokenId]
+                .limitMerkleProofClaim[activeConditionId]
+                .set(merkleProofIndex);
         }
 
         // If there's a price, collect price.
         collectClaimPrice(_quantity, _currency, _pricePerToken, _tokenId);
 
         // Mint the relevant tokens to claimer.
-        transferClaimedTokens(_receiver, activeConditionId, _tokenId, _quantity);
+        transferClaimedTokens(
+            _receiver,
+            activeConditionId,
+            _tokenId,
+            _quantity
+        );
 
-        emit TokensClaimed(activeConditionId, _tokenId, _msgSender(), _receiver, _quantity);
+        emit TokensClaimed(
+            activeConditionId,
+            _tokenId,
+            _msgSender(),
+            _receiver,
+            _quantity
+        );
     }
 
     /// @dev Lets a contract admin (account with `DEFAULT_ADMIN_ROLE`) set claim conditions, for a tokenId.
@@ -378,15 +424,23 @@ contract MSDropERC1155 is
         uint256 lastConditionStartTimestamp;
         for (uint256 i = 0; i < _phases.length; i++) {
             require(
-                i == 0 || lastConditionStartTimestamp < _phases[i].startTimestamp,
+                i == 0 ||
+                    lastConditionStartTimestamp < _phases[i].startTimestamp,
                 "startTimestamp must be in ascending order."
             );
 
-            uint256 supplyClaimedAlready = condition.phases[newStartIndex + i].supplyClaimed;
-            require(supplyClaimedAlready <= _phases[i].maxClaimableSupply, "max supply claimed already");
+            uint256 supplyClaimedAlready = condition
+                .phases[newStartIndex + i]
+                .supplyClaimed;
+            require(
+                supplyClaimedAlready <= _phases[i].maxClaimableSupply,
+                "max supply claimed already"
+            );
 
             condition.phases[newStartIndex + i] = _phases[i];
-            condition.phases[newStartIndex + i].supplyClaimed = supplyClaimedAlready;
+            condition
+                .phases[newStartIndex + i]
+                .supplyClaimed = supplyClaimedAlready;
 
             lastConditionStartTimestamp = _phases[i].startTimestamp;
         }
@@ -431,16 +485,34 @@ contract MSDropERC1155 is
 
         uint256 totalPrice = _quantityToClaim * _pricePerToken;
         uint256 platformFees = (totalPrice * platformFeeBps) / MAX_BPS;
-        uint256 MSCommunityFees = (totalPrice * primaryMSCommunityFeeBps) / MAX_BPS;
+        uint256 MSCommunityFees = (totalPrice * primaryMSCommunityFeeBps) /
+            MAX_BPS;
 
         if (_currency == CurrencyTransferLib.NATIVE_TOKEN) {
             require(msg.value == totalPrice, "must send total price.");
         }
 
-        address recipient = saleRecipient[_tokenId] == address(0) ? primarySaleRecipient : saleRecipient[_tokenId];
-        CurrencyTransferLib.transferCurrency(_currency, _msgSender(), platformFeeRecipient, platformFees);
-        CurrencyTransferLib.transferCurrency(_currency, _msgSender(), primaryMSCommunityFeeRecipient, MSCommunityFees);
-        CurrencyTransferLib.transferCurrency(_currency, _msgSender(), recipient, totalPrice - (platformFees + MSCommunityFees));
+        address recipient = saleRecipient[_tokenId] == address(0)
+            ? primarySaleRecipient
+            : saleRecipient[_tokenId];
+        CurrencyTransferLib.transferCurrency(
+            _currency,
+            _msgSender(),
+            platformFeeRecipient,
+            platformFees
+        );
+        CurrencyTransferLib.transferCurrency(
+            _currency,
+            _msgSender(),
+            primaryMSCommunityFeeRecipient,
+            MSCommunityFees
+        );
+        CurrencyTransferLib.transferCurrency(
+            _currency,
+            _msgSender(),
+            recipient,
+            totalPrice - (platformFees + MSCommunityFees)
+        );
     }
 
     /// @dev Transfers the NFTs being claimed.
@@ -451,11 +523,15 @@ contract MSDropERC1155 is
         uint256 _quantityBeingClaimed
     ) internal {
         // Update the supply minted under mint condition.
-        claimCondition[_tokenId].phases[_conditionId].supplyClaimed += _quantityBeingClaimed;
+        claimCondition[_tokenId]
+            .phases[_conditionId]
+            .supplyClaimed += _quantityBeingClaimed;
 
         // if transfer claimed tokens is called when to != msg.sender, it'd use msg.sender's limits.
         // behavior would be similar to msg.sender mint for itself, then transfer to `to`.
-        claimCondition[_tokenId].limitLastClaimTimestamp[_conditionId][_msgSender()] = block.timestamp;
+        claimCondition[_tokenId].limitLastClaimTimestamp[_conditionId][
+            _msgSender()
+        ] = block.timestamp;
 
         walletClaimCount[_tokenId][_msgSender()] += _quantityBeingClaimed;
 
@@ -472,38 +548,47 @@ contract MSDropERC1155 is
         uint256 _pricePerToken,
         bool verifyMaxQuantityPerTransaction
     ) public view {
-        ClaimCondition memory currentClaimPhase = claimCondition[_tokenId].phases[_conditionId];
+        ClaimCondition memory currentClaimPhase = claimCondition[_tokenId]
+            .phases[_conditionId];
 
         require(
-            _currency == currentClaimPhase.currency && _pricePerToken == currentClaimPhase.pricePerToken,
+            _currency == currentClaimPhase.currency &&
+                _pricePerToken == currentClaimPhase.pricePerToken,
             "invalid currency or price specified."
         );
         // If we're checking for an allowlist quantity restriction, ignore the general quantity restriction.
         require(
             _quantity > 0 &&
-                (!verifyMaxQuantityPerTransaction || _quantity <= currentClaimPhase.quantityLimitPerTransaction),
+                (!verifyMaxQuantityPerTransaction ||
+                    _quantity <= currentClaimPhase.quantityLimitPerTransaction),
             "invalid quantity claimed."
         );
         require(
-            currentClaimPhase.supplyClaimed + _quantity <= currentClaimPhase.maxClaimableSupply,
+            currentClaimPhase.supplyClaimed + _quantity <=
+                currentClaimPhase.maxClaimableSupply,
             "exceed max mint supply."
         );
         require(
-            maxTotalSupply[_tokenId] == 0 || totalSupply[_tokenId] + _quantity <= maxTotalSupply[_tokenId],
+            maxTotalSupply[_tokenId] == 0 ||
+                totalSupply[_tokenId] + _quantity <= maxTotalSupply[_tokenId],
             "exceed max total supply"
         );
         require(
             maxWalletClaimCount[_tokenId] == 0 ||
-                walletClaimCount[_tokenId][_claimer] + _quantity <= maxWalletClaimCount[_tokenId],
+                walletClaimCount[_tokenId][_claimer] + _quantity <=
+                maxWalletClaimCount[_tokenId],
             "exceed claim limit for wallet"
         );
 
-        (uint256 lastClaimTimestamp, uint256 nextValidClaimTimestamp) = getClaimTimestamp(
-            _tokenId,
-            _conditionId,
-            _claimer
+        (
+            uint256 lastClaimTimestamp,
+            uint256 nextValidClaimTimestamp
+        ) = getClaimTimestamp(_tokenId, _conditionId, _claimer);
+        require(
+            lastClaimTimestamp == 0 ||
+                block.timestamp >= nextValidClaimTimestamp,
+            "cannot claim yet."
         );
-        require(lastClaimTimestamp == 0 || block.timestamp >= nextValidClaimTimestamp, "cannot claim yet.");
     }
 
     /// @dev Checks whether a claimer meets the claim condition's allowlist criteria.
@@ -515,21 +600,27 @@ contract MSDropERC1155 is
         bytes32[] calldata _proofs,
         uint256 _proofMaxQuantityPerTransaction
     ) public view returns (bool validMerkleProof, uint256 merkleProofIndex) {
-        ClaimCondition memory currentClaimPhase = claimCondition[_tokenId].phases[_conditionId];
+        ClaimCondition memory currentClaimPhase = claimCondition[_tokenId]
+            .phases[_conditionId];
 
         if (currentClaimPhase.merkleRoot != bytes32(0)) {
             (validMerkleProof, merkleProofIndex) = MerkleProof.verify(
                 _proofs,
                 currentClaimPhase.merkleRoot,
-                keccak256(abi.encodePacked(_claimer, _proofMaxQuantityPerTransaction))
+                keccak256(
+                    abi.encodePacked(_claimer, _proofMaxQuantityPerTransaction)
+                )
             );
             require(validMerkleProof, "not in whitelist.");
             require(
-                !claimCondition[_tokenId].limitMerkleProofClaim[_conditionId].get(merkleProofIndex),
+                !claimCondition[_tokenId]
+                    .limitMerkleProofClaim[_conditionId]
+                    .get(merkleProofIndex),
                 "proof claimed."
             );
             require(
-                _proofMaxQuantityPerTransaction == 0 || _quantity <= _proofMaxQuantityPerTransaction,
+                _proofMaxQuantityPerTransaction == 0 ||
+                    _quantity <= _proofMaxQuantityPerTransaction,
                 "invalid quantity proof."
             );
         }
@@ -540,9 +631,15 @@ contract MSDropERC1155 is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev At any given moment, returns the uid for the active claim condition, for a given tokenId.
-    function getActiveClaimConditionId(uint256 _tokenId) public view returns (uint256) {
+    function getActiveClaimConditionId(
+        uint256 _tokenId
+    ) public view returns (uint256) {
         ClaimConditionList storage conditionList = claimCondition[_tokenId];
-        for (uint256 i = conditionList.currentStartId + conditionList.count; i > conditionList.currentStartId; i--) {
+        for (
+            uint256 i = conditionList.currentStartId + conditionList.count;
+            i > conditionList.currentStartId;
+            i--
+        ) {
             if (block.timestamp >= conditionList.phases[i - 1].startTimestamp) {
                 return i - 1;
             }
@@ -563,11 +660,16 @@ contract MSDropERC1155 is
 
     /// @dev Returns the Monde Singulier Community fee recipient and bps.
     function getMSCommunityFeeInfo() external view returns (address, uint16) {
-        return (primaryMSCommunityFeeRecipient, uint16(primaryMSCommunityFeeBps));
+        return (
+            primaryMSCommunityFeeRecipient,
+            uint16(primaryMSCommunityFeeBps)
+        );
     }
 
     /// @dev Returns the royalty recipient and bps for a particular token Id.
-    function getRoyaltyInfoForToken(uint256 _tokenId) public view returns (address, uint16) {
+    function getRoyaltyInfoForToken(
+        uint256 _tokenId
+    ) public view returns (address, uint16) {
         RoyaltyInfo memory royaltyForToken = royaltyInfoForToken[_tokenId];
 
         return
@@ -581,13 +683,21 @@ contract MSDropERC1155 is
         uint256 _tokenId,
         uint256 _conditionId,
         address _claimer
-    ) public view returns (uint256 lastClaimTimestamp, uint256 nextValidClaimTimestamp) {
-        lastClaimTimestamp = claimCondition[_tokenId].limitLastClaimTimestamp[_conditionId][_claimer];
+    )
+        public
+        view
+        returns (uint256 lastClaimTimestamp, uint256 nextValidClaimTimestamp)
+    {
+        lastClaimTimestamp = claimCondition[_tokenId].limitLastClaimTimestamp[
+            _conditionId
+        ][_claimer];
 
         unchecked {
             nextValidClaimTimestamp =
                 lastClaimTimestamp +
-                claimCondition[_tokenId].phases[_conditionId].waitTimeInSecondsBetweenClaims;
+                claimCondition[_tokenId]
+                    .phases[_conditionId]
+                    .waitTimeInSecondsBetweenClaims;
 
             if (nextValidClaimTimestamp < lastClaimTimestamp) {
                 nextValidClaimTimestamp = type(uint256).max;
@@ -596,11 +706,10 @@ contract MSDropERC1155 is
     }
 
     /// @dev Returns the claim condition at the given uid.
-    function getClaimConditionById(uint256 _tokenId, uint256 _conditionId)
-        external
-        view
-        returns (ClaimCondition memory condition)
-    {
+    function getClaimConditionById(
+        uint256 _tokenId,
+        uint256 _conditionId
+    ) external view returns (ClaimCondition memory condition) {
         condition = claimCondition[_tokenId].phases[_conditionId];
     }
 
@@ -619,34 +728,45 @@ contract MSDropERC1155 is
     }
 
     /// @dev Lets a contract admin set a maximum number of NFTs of a tokenId that can be claimed by any wallet.
-    function setMaxWalletClaimCount(uint256 _tokenId, uint256 _count) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMaxWalletClaimCount(
+        uint256 _tokenId,
+        uint256 _count
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         maxWalletClaimCount[_tokenId] = _count;
         emit MaxWalletClaimCountUpdated(_tokenId, _count);
     }
 
     /// @dev Lets a module admin set a max total supply for token.
-    function setMaxTotalSupply(uint256 _tokenId, uint256 _maxTotalSupply) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMaxTotalSupply(
+        uint256 _tokenId,
+        uint256 _maxTotalSupply
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         maxTotalSupply[_tokenId] = _maxTotalSupply;
         emit MaxTotalSupplyUpdated(_tokenId, _maxTotalSupply);
     }
 
     /// @dev Lets a contract admin set the recipient for all primary sales.
-    function setPrimarySaleRecipient(address _saleRecipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPrimarySaleRecipient(
+        address _saleRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         primarySaleRecipient = _saleRecipient;
         emit PrimarySaleRecipientUpdated(_saleRecipient);
     }
 
     /// @dev Lets a contract admin set the recipient for all primary sales.
-    function setSaleRecipientForToken(uint256 _tokenId, address _saleRecipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setSaleRecipientForToken(
+        uint256 _tokenId,
+        address _saleRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         saleRecipient[_tokenId] = _saleRecipient;
         emit SaleRecipientForTokenUpdated(_tokenId, _saleRecipient);
     }
 
     /// @dev Lets a contract admin update the default royalty recipient and bps.
-    function setDefaultRoyaltyInfo(address _royaltyRecipient, uint256 _royaltyBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setDefaultRoyaltyInfo(
+        address _royaltyRecipient,
+        uint256 _royaltyBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_royaltyBps <= MAX_BPS, "exceed royalty bps");
 
         royaltyRecipient = _royaltyRecipient;
@@ -663,16 +783,19 @@ contract MSDropERC1155 is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_bps <= MAX_BPS, "exceed royalty bps");
 
-        royaltyInfoForToken[_tokenId] = RoyaltyInfo({ recipient: _recipient, bps: _bps });
+        royaltyInfoForToken[_tokenId] = RoyaltyInfo({
+            recipient: _recipient,
+            bps: _bps
+        });
 
         emit RoyaltyForToken(_tokenId, _recipient, _bps);
     }
 
     /// @dev Lets a contract admin update the platform fee recipient and bps
-    function setPlatformFeeInfo(address _platformFeeRecipient, uint256 _platformFeeBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setPlatformFeeInfo(
+        address _platformFeeRecipient,
+        uint256 _platformFeeBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_platformFeeBps <= MAX_BPS, "bps <= 10000.");
 
         platformFeeBps = uint16(_platformFeeBps);
@@ -682,21 +805,27 @@ contract MSDropERC1155 is
     }
 
     /// @dev Lets a contract admin update the Monde Singulier Community fee recipient and bps
-    function setMSCommunityFeeInfo(address _MSCommunityFeeRecipient, uint256 _MSCommunityFeeBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setMSCommunityFeeInfo(
+        address _MSCommunityFeeRecipient,
+        uint256 _MSCommunityFeeBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_MSCommunityFeeBps <= MAX_BPS, "> MAX_BPS.");
 
         primaryMSCommunityFeeBps = uint16(_MSCommunityFeeBps);
         primaryMSCommunityFeeRecipient = _MSCommunityFeeRecipient;
 
-        emit primaryMSCommunityFeeInfoUpdated(_MSCommunityFeeRecipient, _MSCommunityFeeBps);
+        emit primaryMSCommunityFeeInfoUpdated(
+            _MSCommunityFeeRecipient,
+            _MSCommunityFeeBps
+        );
     }
 
     /// @dev Lets a contract admin set a new owner for the contract. The new owner must be a contract admin.
     function setOwner(address _newOwner) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _newOwner), "new owner not module admin.");
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, _newOwner),
+            "new owner not module admin."
+        );
         emit OwnerUpdated(_owner, _newOwner);
         _owner = _newOwner;
     }
@@ -706,11 +835,7 @@ contract MSDropERC1155 is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Lets a token owner burn the tokens they own (i.e. destroy for good)
-    function burn(
-        address account,
-        uint256 id,
-        uint256 value
-    ) public virtual {
+    function burn(address account, uint256 id, uint256 value) public virtual {
         require(
             account == _msgSender() || isApprovedForAll(account, _msgSender()),
             "ERC1155: caller is not owner nor approved."
@@ -747,8 +872,15 @@ contract MSDropERC1155 is
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         // if transfer is restricted on the contract, we still want to allow burning and minting
-        if (!hasRole(TRANSFER_ROLE, address(0)) && from != address(0) && to != address(0)) {
-            require(hasRole(TRANSFER_ROLE, from) || hasRole(TRANSFER_ROLE, to), "restricted to TRANSFER_ROLE holders.");
+        if (
+            !hasRole(TRANSFER_ROLE, address(0)) &&
+            from != address(0) &&
+            to != address(0)
+        ) {
+            require(
+                hasRole(TRANSFER_ROLE, from) || hasRole(TRANSFER_ROLE, to),
+                "restricted to TRANSFER_ROLE holders."
+            );
         }
 
         if (from == address(0)) {

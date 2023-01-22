@@ -18,7 +18,7 @@ import "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 
 //  ==========  Internal imports    ==========
 
-import { IMSDropMarketplace } from "../interfaces/marketplace/IMSDropMarketplace.sol";
+import {IMSDropMarketplace} from "../interfaces/marketplace/IMSDropMarketplace.sol";
 
 import "../openzeppelin-presets/metatx/ERC2771ContextUpgradeable.sol";
 
@@ -105,7 +105,6 @@ contract MSDropMarketplace is
                     Constructor + initializer logic
     //////////////////////////////////////////////////////////////*/
 
-
     /// @dev Initiliazes the contract, like a constructor.
     function initialize(
         address _defaultAdmin,
@@ -124,7 +123,7 @@ contract MSDropMarketplace is
         bidBufferBps = 500;
 
         nativeTokenWrapper = _nativeTokenWrapper;
-        
+
         MSFeeRecipient = _MSFeeRecipient;
         MSCommunityFeeRecipient = _MSCommunityFeeRecipient;
         MSCommunityFeeBps = uint64(_MSCommunityFeeBps);
@@ -133,7 +132,6 @@ contract MSDropMarketplace is
         _setupRole(LISTER_ROLE, address(0));
         _setupRole(ASSET_ROLE, address(0));
     }
-
 
     /*///////////////////////////////////////////////////////////////
                         Generic contract logic
@@ -185,7 +183,9 @@ contract MSDropMarketplace is
         return this.onERC721Received.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         virtual
@@ -210,11 +210,22 @@ contract MSDropMarketplace is
 
         address tokenOwner = _msgSender();
         TokenType tokenTypeOfListing = getTokenType(_params.assetContract);
-        uint256 tokenAmountToList = getSafeQuantity(tokenTypeOfListing, _params.quantityToList);
+        uint256 tokenAmountToList = getSafeQuantity(
+            tokenTypeOfListing,
+            _params.quantityToList
+        );
 
         require(tokenAmountToList > 0, "QUANTITY");
-        require(hasRole(LISTER_ROLE, address(0)) || hasRole(LISTER_ROLE, _msgSender()), "!LISTER");
-        require(hasRole(ASSET_ROLE, address(0)) || hasRole(ASSET_ROLE, _params.assetContract), "!ASSET");
+        require(
+            hasRole(LISTER_ROLE, address(0)) ||
+                hasRole(LISTER_ROLE, _msgSender()),
+            "!LISTER"
+        );
+        require(
+            hasRole(ASSET_ROLE, address(0)) ||
+                hasRole(ASSET_ROLE, _params.assetContract),
+            "!ASSET"
+        );
 
         uint256 startTime = _params.startTime;
         if (startTime != 0 && startTime < block.timestamp) {
@@ -237,7 +248,9 @@ contract MSDropMarketplace is
             assetContract: _params.assetContract,
             tokenId: _params.tokenId,
             startTime: startTime,
-            endTime: _params.secondsUntilEndTime == 0 ? _params.secondsUntilEndTime : startTime + _params.secondsUntilEndTime,
+            endTime: _params.secondsUntilEndTime == 0
+                ? _params.secondsUntilEndTime
+                : startTime + _params.secondsUntilEndTime,
             quantity: tokenAmountToList,
             currency: _params.currencyToAccept,
             reservePricePerToken: _params.reservePricePerToken,
@@ -251,11 +264,25 @@ contract MSDropMarketplace is
 
         // Tokens listed for sale in an auction are escrowed in Marketplace.
         if (newListing.listingType == ListingType.Auction) {
-            require(newListing.buyoutPricePerToken >= newListing.reservePricePerToken, "RESERVE");
-            transferListingTokens(tokenOwner, address(this), tokenAmountToList, newListing);
+            require(
+                newListing.buyoutPricePerToken >=
+                    newListing.reservePricePerToken,
+                "RESERVE"
+            );
+            transferListingTokens(
+                tokenOwner,
+                address(this),
+                tokenAmountToList,
+                newListing
+            );
         }
 
-        emit DropListingAdded(listingId, _params.assetContract, tokenOwner, newListing);
+        emit DropListingAdded(
+            listingId,
+            _params.assetContract,
+            tokenOwner,
+            newListing
+        );
     }
 
     /// @dev Lets a listing's creator edit the listing's parameters.
@@ -269,7 +296,10 @@ contract MSDropMarketplace is
         uint256 _secondsUntilEndTime
     ) external override onlyListingCreator(_listingId) {
         Listing memory targetListing = listings[_listingId];
-        uint256 safeNewQuantity = getSafeQuantity(targetListing.tokenType, _quantityToList);
+        uint256 safeNewQuantity = getSafeQuantity(
+            targetListing.tokenType,
+            _quantityToList
+        );
         bool isAuction = targetListing.listingType == ListingType.Auction;
 
         require(safeNewQuantity != 0, "QUANTITY");
@@ -292,7 +322,9 @@ contract MSDropMarketplace is
             assetContract: targetListing.assetContract,
             tokenId: targetListing.tokenId,
             startTime: _startTime == 0 ? targetListing.startTime : _startTime,
-            endTime: _secondsUntilEndTime == 0 ? targetListing.endTime : _startTime + _secondsUntilEndTime,
+            endTime: _secondsUntilEndTime == 0
+                ? targetListing.endTime
+                : _startTime + _secondsUntilEndTime,
             quantity: safeNewQuantity,
             currency: _currencyToAccept,
             reservePricePerToken: _reservePricePerToken,
@@ -321,9 +353,10 @@ contract MSDropMarketplace is
     ) external payable override nonReentrant onlyExistingListing(_listingId) {
         Listing memory targetListing = listings[_listingId];
 
-        if(targetListing.endTime != 0){
+        if (targetListing.endTime != 0) {
             require(
-                targetListing.endTime > block.timestamp && targetListing.startTime < block.timestamp,
+                targetListing.endTime > block.timestamp &&
+                    targetListing.startTime < block.timestamp,
                 "inactive listing."
             );
         }
@@ -338,25 +371,37 @@ contract MSDropMarketplace is
         });
 
         // A bid to an auction must be made in the auction's desired currency.
-        require(newOffer.currency == targetListing.currency, "must use approved currency to bid");
+        require(
+            newOffer.currency == targetListing.currency,
+            "must use approved currency to bid"
+        );
 
         // A bid must be made for all auction items.
-        newOffer.quantityWanted = getSafeQuantity(targetListing.tokenType, targetListing.quantity);
+        newOffer.quantityWanted = getSafeQuantity(
+            targetListing.tokenType,
+            targetListing.quantity
+        );
 
         handleBid(targetListing, newOffer);
     }
 
     /// @dev Processes an incoming bid in an auction.
-    function handleBid(Listing memory _targetListing, Offer memory _incomingBid) internal {
+    function handleBid(
+        Listing memory _targetListing,
+        Offer memory _incomingBid
+    ) internal {
         Offer memory currentWinningBid = winningBid[_targetListing.listingId];
-        uint256 currentOfferAmount = currentWinningBid.pricePerToken * currentWinningBid.quantityWanted;
-        uint256 incomingOfferAmount = _incomingBid.pricePerToken * _incomingBid.quantityWanted;
+        uint256 currentOfferAmount = currentWinningBid.pricePerToken *
+            currentWinningBid.quantityWanted;
+        uint256 incomingOfferAmount = _incomingBid.pricePerToken *
+            _incomingBid.quantityWanted;
         address _nativeTokenWrapper = nativeTokenWrapper;
 
         // Close auction and execute sale if there's a buyout price and incoming offer amount is buyout price.
         if (
             _targetListing.buyoutPricePerToken > 0 &&
-            incomingOfferAmount >= _targetListing.buyoutPricePerToken * _targetListing.quantity
+            incomingOfferAmount >=
+            _targetListing.buyoutPricePerToken * _targetListing.quantity
         ) {
             _closeAuctionForBidder(_targetListing, _incomingBid);
         } else {
@@ -366,7 +411,8 @@ contract MSDropMarketplace is
              */
             require(
                 isNewWinningBid(
-                    _targetListing.reservePricePerToken * _targetListing.quantity,
+                    _targetListing.reservePricePerToken *
+                        _targetListing.quantity,
                     currentOfferAmount,
                     incomingOfferAmount
                 ),
@@ -377,7 +423,9 @@ contract MSDropMarketplace is
             winningBid[_targetListing.listingId] = _incomingBid;
 
             if (_targetListing.endTime == 0) {
-                _targetListing.endTime = block.timestamp + _incomingBid.expirationTimestamp;
+                _targetListing.endTime =
+                    block.timestamp +
+                    _incomingBid.expirationTimestamp;
                 _targetListing.startTime = block.timestamp;
                 listings[_targetListing.listingId] = _targetListing;
             }
@@ -429,7 +477,9 @@ contract MSDropMarketplace is
             isValidNewBid = _incomingBidAmount >= _reserveAmount;
         } else {
             isValidNewBid = (_incomingBidAmount > _currentWinningBidAmount &&
-                ((_incomingBidAmount - _currentWinningBidAmount) * MAX_BPS) / _currentWinningBidAmount >= bidBufferBps);
+                ((_incomingBidAmount - _currentWinningBidAmount) * MAX_BPS) /
+                    _currentWinningBidAmount >=
+                bidBufferBps);
         }
     }
 
@@ -438,32 +488,37 @@ contract MSDropMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Lets an account close an auction for either the (1) winning bidder, or (2) auction creator.
-    function closeAuction(uint256 _listingId, address _closeFor)
-        external
-        override
-        nonReentrant
-        onlyExistingListing(_listingId)
-    {
+    function closeAuction(
+        uint256 _listingId,
+        address _closeFor
+    ) external override nonReentrant onlyExistingListing(_listingId) {
         Listing memory targetListing = listings[_listingId];
 
-        require(targetListing.listingType == ListingType.Auction, "not an auction.");
+        require(
+            targetListing.listingType == ListingType.Auction,
+            "not an auction."
+        );
 
         Offer memory targetBid = winningBid[_listingId];
 
         // Cancel auction if (1) auction hasn't started, or (2) auction doesn't have any bids.
-        bool toCancel = targetListing.startTime > block.timestamp || targetBid.offeror == address(0);
+        bool toCancel = targetListing.startTime > block.timestamp ||
+            targetBid.offeror == address(0);
 
         if (toCancel) {
             // cancel auction listing owner check
             _cancelAuction(targetListing);
         } else {
-            require(targetListing.endTime < block.timestamp, "cannot close auction before it has ended.");
+            require(
+                targetListing.endTime < block.timestamp,
+                "cannot close auction before it has ended."
+            );
 
             // No `else if` to let auction close in 1 tx when targetListing.tokenOwner == targetBid.offeror.
             if (_closeFor == targetListing.tokenOwner) {
                 _closeAuctionForAuctionCreator(targetListing, targetBid);
             }
-            
+
             if (_closeFor == targetBid.offeror) {
                 _closeAuctionForBidder(targetListing, targetBid);
             }
@@ -472,18 +527,36 @@ contract MSDropMarketplace is
 
     /// @dev Cancels an auction.
     function _cancelAuction(Listing memory _targetListing) internal {
-        require(listings[_targetListing.listingId].tokenOwner == _msgSender(), "caller is not the listing creator.");
+        require(
+            listings[_targetListing.listingId].tokenOwner == _msgSender(),
+            "caller is not the listing creator."
+        );
 
         delete listings[_targetListing.listingId];
 
-        transferListingTokens(address(this), _targetListing.tokenOwner, _targetListing.quantity, _targetListing);
+        transferListingTokens(
+            address(this),
+            _targetListing.tokenOwner,
+            _targetListing.quantity,
+            _targetListing
+        );
 
-        emit DropAuctionClosed(_targetListing.listingId, _msgSender(), true, _targetListing.tokenOwner, address(0));
+        emit DropAuctionClosed(
+            _targetListing.listingId,
+            _msgSender(),
+            true,
+            _targetListing.tokenOwner,
+            address(0)
+        );
     }
 
     /// @dev Closes an auction for an auction creator; distributes winning bid amount to auction creator.
-    function _closeAuctionForAuctionCreator(Listing memory _targetListing, Offer memory _winningBid) internal {
-        uint256 payoutAmount = _winningBid.pricePerToken * _targetListing.quantity;
+    function _closeAuctionForAuctionCreator(
+        Listing memory _targetListing,
+        Offer memory _winningBid
+    ) internal {
+        uint256 payoutAmount = _winningBid.pricePerToken *
+            _targetListing.quantity;
 
         _targetListing.quantity = 0;
         _targetListing.endTime = block.timestamp;
@@ -492,7 +565,13 @@ contract MSDropMarketplace is
         _winningBid.pricePerToken = 0;
         winningBid[_targetListing.listingId] = _winningBid;
 
-        payout(address(this), _targetListing.dropAuction.dropCreatorAddress, _targetListing.currency, payoutAmount, _targetListing);
+        payout(
+            address(this),
+            _targetListing.dropAuction.dropCreatorAddress,
+            _targetListing.currency,
+            payoutAmount,
+            _targetListing
+        );
 
         emit DropAuctionClosed(
             _targetListing.listingId,
@@ -504,7 +583,10 @@ contract MSDropMarketplace is
     }
 
     /// @dev Closes an auction for the winning bidder; distributes auction items to the winning bidder.
-    function _closeAuctionForBidder(Listing memory _targetListing, Offer memory _winningBid) internal {
+    function _closeAuctionForBidder(
+        Listing memory _targetListing,
+        Offer memory _winningBid
+    ) internal {
         uint256 quantityToSend = _winningBid.quantityWanted;
 
         _targetListing.endTime = block.timestamp;
@@ -513,7 +595,12 @@ contract MSDropMarketplace is
         winningBid[_targetListing.listingId] = _winningBid;
         listings[_targetListing.listingId] = _targetListing;
 
-        transferListingTokens(address(this), _winningBid.offeror, quantityToSend, _targetListing);
+        transferListingTokens(
+            address(this),
+            _winningBid.offeror,
+            quantityToSend,
+            _targetListing
+        );
 
         emit DropAuctionClosed(
             _targetListing.listingId,
@@ -536,9 +623,20 @@ contract MSDropMarketplace is
         Listing memory _listing
     ) internal {
         if (_listing.tokenType == TokenType.ERC1155) {
-            IERC1155Upgradeable(_listing.assetContract).safeTransferFrom(_from, _to, _listing.tokenId, _quantity, "");
+            IERC1155Upgradeable(_listing.assetContract).safeTransferFrom(
+                _from,
+                _to,
+                _listing.tokenId,
+                _quantity,
+                ""
+            );
         } else if (_listing.tokenType == TokenType.ERC721) {
-            IERC721Upgradeable(_listing.assetContract).safeTransferFrom(_from, _to, _listing.tokenId, "");
+            IERC721Upgradeable(_listing.assetContract).safeTransferFrom(
+                _from,
+                _to,
+                _listing.tokenId,
+                ""
+            );
         }
     }
 
@@ -550,8 +648,10 @@ contract MSDropMarketplace is
         uint256 _totalPayoutAmount,
         Listing memory _listing
     ) internal {
-        uint256 MSFeeCut = (_totalPayoutAmount * _listing.dropAuction.platformAuctionDropFeeBps) / MAX_BPS;
-        uint256 primaryMSCommunityFees = (_totalPayoutAmount * MSCommunityFeeBps) / MAX_BPS;
+        uint256 MSFeeCut = (_totalPayoutAmount *
+            _listing.dropAuction.platformAuctionDropFeeBps) / MAX_BPS;
+        uint256 primaryMSCommunityFees = (_totalPayoutAmount *
+            MSCommunityFeeBps) / MAX_BPS;
 
         // Distribute price to token owner
         address _nativeTokenWrapper = nativeTokenWrapper;
@@ -592,13 +692,25 @@ contract MSDropMarketplace is
 
         if (_tokenType == TokenType.ERC1155) {
             isValid =
-                IERC1155Upgradeable(_assetContract).balanceOf(_tokenOwner, _tokenId) >= _quantity &&
-                IERC1155Upgradeable(_assetContract).isApprovedForAll(_tokenOwner, market);
+                IERC1155Upgradeable(_assetContract).balanceOf(
+                    _tokenOwner,
+                    _tokenId
+                ) >=
+                _quantity &&
+                IERC1155Upgradeable(_assetContract).isApprovedForAll(
+                    _tokenOwner,
+                    market
+                );
         } else if (_tokenType == TokenType.ERC721) {
             isValid =
-                IERC721Upgradeable(_assetContract).ownerOf(_tokenId) == _tokenOwner &&
-                (IERC721Upgradeable(_assetContract).getApproved(_tokenId) == market ||
-                    IERC721Upgradeable(_assetContract).isApprovedForAll(_tokenOwner, market));
+                IERC721Upgradeable(_assetContract).ownerOf(_tokenId) ==
+                _tokenOwner &&
+                (IERC721Upgradeable(_assetContract).getApproved(_tokenId) ==
+                    market ||
+                    IERC721Upgradeable(_assetContract).isApprovedForAll(
+                        _tokenOwner,
+                        market
+                    ));
         }
 
         require(isValid, "!BALNFT");
@@ -609,23 +721,34 @@ contract MSDropMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Enforces quantity == 1 if tokenType is TokenType.ERC721.
-    function getSafeQuantity(TokenType _tokenType, uint256 _quantityToCheck)
-        internal
-        pure
-        returns (uint256 safeQuantity)
-    {
+    function getSafeQuantity(
+        TokenType _tokenType,
+        uint256 _quantityToCheck
+    ) internal pure returns (uint256 safeQuantity) {
         if (_quantityToCheck == 0) {
             safeQuantity = 0;
         } else {
-            safeQuantity = _tokenType == TokenType.ERC721 ? 1 : _quantityToCheck;
+            safeQuantity = _tokenType == TokenType.ERC721
+                ? 1
+                : _quantityToCheck;
         }
     }
 
     /// @dev Returns the interface supported by a contract.
-    function getTokenType(address _assetContract) internal view returns (TokenType tokenType) {
-        if (IERC165Upgradeable(_assetContract).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
+    function getTokenType(
+        address _assetContract
+    ) internal view returns (TokenType tokenType) {
+        if (
+            IERC165Upgradeable(_assetContract).supportsInterface(
+                type(IERC1155Upgradeable).interfaceId
+            )
+        ) {
             tokenType = TokenType.ERC1155;
-        } else if (IERC165Upgradeable(_assetContract).supportsInterface(type(IERC721Upgradeable).interfaceId)) {
+        } else if (
+            IERC165Upgradeable(_assetContract).supportsInterface(
+                type(IERC721Upgradeable).interfaceId
+            )
+        ) {
             tokenType = TokenType.ERC721;
         } else {
             revert("token must be ERC1155 or ERC721.");
@@ -647,30 +770,35 @@ contract MSDropMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Lets a contract admin update platform fee recipient and bps.
-    function setPlatformFeeInfo(address _platformFeeRecipient)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setPlatformFeeInfo(
+        address _platformFeeRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         MSFeeRecipient = _platformFeeRecipient;
 
         emit PlatformFeeInfoUpdated(_platformFeeRecipient);
     }
 
     /// @dev Lets a contract admin update platform fee recipient and bps.
-    function setMSCommunityFeeInfo(address _MSCommunityFeeRecipient, uint256 _MSCommunityFeeBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setMSCommunityFeeInfo(
+        address _MSCommunityFeeRecipient,
+        uint256 _MSCommunityFeeBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_MSCommunityFeeBps <= MAX_BPS, "bps <= 10000.");
 
         MSCommunityFeeBps = uint64(MSCommunityFeeBps);
         MSCommunityFeeRecipient = _MSCommunityFeeRecipient;
 
-        emit MSCommunityFeeInfoUpdated(_MSCommunityFeeRecipient, MSCommunityFeeBps);
+        emit MSCommunityFeeInfoUpdated(
+            _MSCommunityFeeRecipient,
+            MSCommunityFeeBps
+        );
     }
 
     /// @dev Lets a contract admin set auction buffers.
-    function setAuctionBuffers(uint256 _timeBuffer, uint256 _bidBufferBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setAuctionBuffers(
+        uint256 _timeBuffer,
+        uint256 _bidBufferBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_bidBufferBps < MAX_BPS, "invalid BPS.");
 
         timeBuffer = uint64(_timeBuffer);

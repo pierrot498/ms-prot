@@ -19,7 +19,7 @@ import "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 
 //  ==========  Internal imports    ==========
 
-import { IMarketplace } from "../interfaces/marketplace/IMarketplace.sol";
+import {IMarketplace} from "../interfaces/marketplace/IMarketplace.sol";
 
 import "../openzeppelin-presets/metatx/ERC2771ContextUpgradeable.sol";
 
@@ -82,7 +82,8 @@ contract MSMarketplace is
     mapping(uint256 => Listing) public listings;
 
     /// @dev Mapping from uid of a direct listing => offeror address => offer made to the direct listing by the respective offeror.
-    mapping(address => mapping(uint256 =>  mapping(address => Offer))) public offers;
+    mapping(address => mapping(uint256 => mapping(address => Offer)))
+        public offers;
 
     /// @dev Mapping from uid of an auction listing => current winning bid in an auction.
     mapping(uint256 => BidOffer) public winningBid;
@@ -93,7 +94,10 @@ contract MSMarketplace is
 
     /// @dev Checks whether caller is a listing creator.
     modifier onlyListingCreator(uint256 _listingId) {
-        require(listings[_listingId].tokenOwner == _msgSender(), "!LISTINGCREATOR");
+        require(
+            listings[_listingId].tokenOwner == _msgSender(),
+            "!LISTINGCREATOR"
+        );
         _;
     }
 
@@ -102,17 +106,23 @@ contract MSMarketplace is
         require(listings[_listingId].assetContract != address(0), "DNE");
         _;
     }
-    
+
     /// @dev Checks whether a caller is the asset owner.
-    modifier onlyOwner(address _nftContract, uint256 _tokenId, address _tokenOwner) {
-        require(IERC721Upgradeable(_nftContract).ownerOf(_tokenId) == _tokenOwner, "!OWNER");
+    modifier onlyOwner(
+        address _nftContract,
+        uint256 _tokenId,
+        address _tokenOwner
+    ) {
+        require(
+            IERC721Upgradeable(_nftContract).ownerOf(_tokenId) == _tokenOwner,
+            "!OWNER"
+        );
         _;
     }
 
     /*///////////////////////////////////////////////////////////////
                     Constructor + initializer logic
     //////////////////////////////////////////////////////////////*/
-
 
     /// @dev Initiliazes the contract, like a constructor.
     function initialize(
@@ -143,7 +153,6 @@ contract MSMarketplace is
         _setupRole(LISTER_ROLE, address(0));
         _setupRole(ASSET_ROLE, address(0));
     }
-
 
     /*///////////////////////////////////////////////////////////////
                         Generic contract logic
@@ -195,7 +204,9 @@ contract MSMarketplace is
         return this.onERC721Received.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         virtual
@@ -220,11 +231,22 @@ contract MSMarketplace is
 
         address tokenOwner = _msgSender();
         TokenType tokenTypeOfListing = getTokenType(_params.assetContract);
-        uint256 tokenAmountToList = getSafeQuantity(tokenTypeOfListing, _params.quantityToList);
+        uint256 tokenAmountToList = getSafeQuantity(
+            tokenTypeOfListing,
+            _params.quantityToList
+        );
 
         require(tokenAmountToList > 0, "QUANTITY");
-        require(hasRole(LISTER_ROLE, address(0)) || hasRole(LISTER_ROLE, _msgSender()), "!LISTER");
-        require(hasRole(ASSET_ROLE, address(0)) || hasRole(ASSET_ROLE, _params.assetContract), "!ASSET");
+        require(
+            hasRole(LISTER_ROLE, address(0)) ||
+                hasRole(LISTER_ROLE, _msgSender()),
+            "!LISTER"
+        );
+        require(
+            hasRole(ASSET_ROLE, address(0)) ||
+                hasRole(ASSET_ROLE, _params.assetContract),
+            "!ASSET"
+        );
 
         uint256 startTime = _params.startTime;
         if (startTime != 0 && startTime < block.timestamp) {
@@ -247,7 +269,9 @@ contract MSMarketplace is
             assetContract: _params.assetContract,
             tokenId: _params.tokenId,
             startTime: startTime,
-            endTime: _params.secondsUntilEndTime == 0 ? _params.secondsUntilEndTime : startTime + _params.secondsUntilEndTime,
+            endTime: _params.secondsUntilEndTime == 0
+                ? _params.secondsUntilEndTime
+                : startTime + _params.secondsUntilEndTime,
             quantity: tokenAmountToList,
             currency: _params.currencyToAccept,
             reservePricePerToken: _params.reservePricePerToken,
@@ -260,11 +284,27 @@ contract MSMarketplace is
 
         // Tokens listed for sale in an auction are escrowed in Marketplace.
         if (newListing.listingType == ListingType.Auction) {
-            require(newListing.buyoutPricePerToken >= newListing.reservePricePerToken, "RESERVE");
-            transferListingTokens(tokenOwner, address(this), tokenAmountToList, newListing.assetContract, newListing.tokenId, newListing.tokenType);
+            require(
+                newListing.buyoutPricePerToken >=
+                    newListing.reservePricePerToken,
+                "RESERVE"
+            );
+            transferListingTokens(
+                tokenOwner,
+                address(this),
+                tokenAmountToList,
+                newListing.assetContract,
+                newListing.tokenId,
+                newListing.tokenType
+            );
         }
 
-        emit ListingAdded(listingId, _params.assetContract, tokenOwner, newListing);
+        emit ListingAdded(
+            listingId,
+            _params.assetContract,
+            tokenOwner,
+            newListing
+        );
     }
 
     /// @dev Lets a listing's creator edit the listing's parameters.
@@ -278,14 +318,17 @@ contract MSMarketplace is
         uint256 _secondsUntilEndTime
     ) external override onlyListingCreator(_listingId) {
         Listing memory targetListing = listings[_listingId];
-        uint256 safeNewQuantity = getSafeQuantity(targetListing.tokenType, _quantityToList);
+        uint256 safeNewQuantity = getSafeQuantity(
+            targetListing.tokenType,
+            _quantityToList
+        );
         bool isAuction = targetListing.listingType == ListingType.Auction;
 
         require(safeNewQuantity != 0, "QUANTITY");
 
         // Can only edit auction listing before it starts.
         if (isAuction) {
-            if (targetListing.startTime != 0){
+            if (targetListing.startTime != 0) {
                 require(block.timestamp < targetListing.startTime, "STARTED");
             }
             require(_buyoutPricePerToken >= _reservePricePerToken, "RESERVE");
@@ -303,7 +346,9 @@ contract MSMarketplace is
             assetContract: targetListing.assetContract,
             tokenId: targetListing.tokenId,
             startTime: _startTime == 0 ? targetListing.startTime : _startTime,
-            endTime: _secondsUntilEndTime == 0 ? targetListing.endTime : _startTime + _secondsUntilEndTime,
+            endTime: _secondsUntilEndTime == 0
+                ? targetListing.endTime
+                : _startTime + _secondsUntilEndTime,
             quantity: safeNewQuantity,
             currency: _currencyToAccept,
             reservePricePerToken: _reservePricePerToken,
@@ -318,7 +363,9 @@ contract MSMarketplace is
     }
 
     /// @dev Lets a direct listing creator cancel their listing.
-    function cancelDirectListing(uint256 _listingId) external onlyListingCreator(_listingId) {
+    function cancelDirectListing(
+        uint256 _listingId
+    ) external onlyListingCreator(_listingId) {
         Listing memory targetListing = listings[_listingId];
 
         require(targetListing.listingType == ListingType.Direct, "!DIRECT");
@@ -345,7 +392,9 @@ contract MSMarketplace is
 
         // Check whether the settled total price and currency to use are correct.
         require(
-            _currency == targetListing.currency && _totalPrice == (targetListing.buyoutPricePerToken * _quantityToBuy),
+            _currency == targetListing.currency &&
+                _totalPrice ==
+                (targetListing.buyoutPricePerToken * _quantityToBuy),
             "!PRICE"
         );
 
@@ -366,10 +415,19 @@ contract MSMarketplace is
         address _offeror,
         address _currency,
         uint256 _pricePerToken
-    ) external override nonReentrant onlyOwner(_nftContract, _tokenId, _msgSender()) {
+    )
+        external
+        override
+        nonReentrant
+        onlyOwner(_nftContract, _tokenId, _msgSender())
+    {
         Offer memory targetOffer = offers[_nftContract][_tokenId][_offeror];
 
-        require(_currency == targetOffer.currency && _pricePerToken == targetOffer.pricePerToken, "!PRICE");
+        require(
+            _currency == targetOffer.currency &&
+                _pricePerToken == targetOffer.pricePerToken,
+            "!PRICE"
+        );
         require(targetOffer.expirationTimestamp > block.timestamp, "EXPIRED");
 
         delete offers[_nftContract][_tokenId][_offeror];
@@ -404,8 +462,22 @@ contract MSMarketplace is
         _targetListing.quantity -= _listingTokenAmountToTransfer;
         listings[_targetListing.listingId] = _targetListing;
 
-        payout(_payer, _targetListing.tokenOwner, _currency, _currencyAmountToTransfer, _targetListing.assetContract, _targetListing.tokenId);
-        transferListingTokens(_targetListing.tokenOwner, _receiver, _listingTokenAmountToTransfer, _targetListing.assetContract, _targetListing.tokenId, _targetListing.tokenType);
+        payout(
+            _payer,
+            _targetListing.tokenOwner,
+            _currency,
+            _currencyAmountToTransfer,
+            _targetListing.assetContract,
+            _targetListing.tokenId
+        );
+        transferListingTokens(
+            _targetListing.tokenOwner,
+            _receiver,
+            _listingTokenAmountToTransfer,
+            _targetListing.assetContract,
+            _targetListing.tokenId,
+            _targetListing.tokenType
+        );
 
         emit NewSale(
             _targetListing.listingId,
@@ -427,11 +499,18 @@ contract MSMarketplace is
     ) internal {
         // Check: buyer owns and has approved sufficient currency for sale.
         if (_currency == CurrencyTransferLib.NATIVE_TOKEN) {
-            require(msg.value == _currencyAmountToTransfer, "msg.value != price");
+            require(
+                msg.value == _currencyAmountToTransfer,
+                "msg.value != price"
+            );
         } else {
-           validateERC20BalAndAllowance(_payer, _currency, _currencyAmountToTransfer);
+            validateERC20BalAndAllowance(
+                _payer,
+                _currency,
+                _currencyAmountToTransfer
+            );
         }
-        
+
         validateOwnershipAndApproval(
             _msgSender(),
             _offer.nftContract,
@@ -441,7 +520,14 @@ contract MSMarketplace is
         );
 
         //payout(_payer, _msgSender(), _currency, _currencyAmountToTransfer, _offer.nftContract, _offer.tokenId);
-        transferListingTokens(_msgSender(), _receiver, _offerTokenAmountToTransfer, _offer.nftContract, _offer.tokenId, _offer.tokenType);
+        transferListingTokens(
+            _msgSender(),
+            _receiver,
+            _offerTokenAmountToTransfer,
+            _offer.nftContract,
+            _offer.tokenId,
+            _offer.tokenType
+        );
 
         emit NewAcceptOffer(
             _offer.tokenId,
@@ -466,9 +552,10 @@ contract MSMarketplace is
     ) external payable override nonReentrant onlyExistingListing(_listingId) {
         Listing memory targetListing = listings[_listingId];
 
-        if(targetListing.endTime != 0){
+        if (targetListing.endTime != 0) {
             require(
-                targetListing.endTime > block.timestamp && targetListing.startTime < block.timestamp,
+                targetListing.endTime > block.timestamp &&
+                    targetListing.startTime < block.timestamp,
                 "inactive listing."
             );
         }
@@ -481,16 +568,22 @@ contract MSMarketplace is
             pricePerToken: _pricePerToken,
             expirationTimestamp: _expirationTimestamp
         });
-        
+
         // A bid to an auction must be made in the auction's desired currency.
-        require(newBid.currency == targetListing.currency, "must use approved currency to bid");
+        require(
+            newBid.currency == targetListing.currency,
+            "must use approved currency to bid"
+        );
 
         // A bid must be made for all auction items.
-        newBid.quantityWanted = getSafeQuantity(targetListing.tokenType, targetListing.quantity);
+        newBid.quantityWanted = getSafeQuantity(
+            targetListing.tokenType,
+            targetListing.quantity
+        );
 
         handleBid(targetListing, newBid);
     }
-    
+
     function offer(
         address _nftContract,
         uint256 _tokenId,
@@ -500,7 +593,7 @@ contract MSMarketplace is
         uint256 _expirationTimestamp
     ) external payable override nonReentrant {
         TokenType tokenTypeOfOffer = getTokenType(_nftContract);
-       
+
         Offer memory newOffer = Offer({
             nftContract: _nftContract,
             tokenId: _tokenId,
@@ -514,22 +607,28 @@ contract MSMarketplace is
 
         require(msg.value == 0, "no value needed");
         // Offers to direct listings cannot be made directly in native tokens.
-        newOffer.currency = _currency == CurrencyTransferLib.NATIVE_TOKEN ? nativeTokenWrapper : _currency;
-        newOffer.quantityWanted = getSafeQuantity(newOffer.tokenType, _quantityWanted);
-        
+        newOffer.currency = _currency == CurrencyTransferLib.NATIVE_TOKEN
+            ? nativeTokenWrapper
+            : _currency;
+        newOffer.quantityWanted = getSafeQuantity(
+            newOffer.tokenType,
+            _quantityWanted
+        );
+
         handleOffer(newOffer);
     }
 
     /// @dev Processes a new offer to a direct listing.
     function handleOffer(Offer memory _newOffer) internal {
-
         validateERC20BalAndAllowance(
             _newOffer.offeror,
             _newOffer.currency,
             _newOffer.pricePerToken * _newOffer.quantityWanted
         );
 
-        offers[_newOffer.nftContract][_newOffer.tokenId][_newOffer.offeror] = _newOffer;
+        offers[_newOffer.nftContract][_newOffer.tokenId][
+            _newOffer.offeror
+        ] = _newOffer;
 
         emit NewOffer(
             _newOffer.nftContract,
@@ -542,16 +641,24 @@ contract MSMarketplace is
     }
 
     /// @dev Processes an incoming bid in an auction.
-    function handleBid(Listing memory _targetListing, BidOffer memory _incomingBid) internal {
-        BidOffer memory currentWinningBid = winningBid[_targetListing.listingId];
-        uint256 currentOfferAmount = currentWinningBid.pricePerToken * currentWinningBid.quantityWanted;
-        uint256 incomingOfferAmount = _incomingBid.pricePerToken * _incomingBid.quantityWanted;
+    function handleBid(
+        Listing memory _targetListing,
+        BidOffer memory _incomingBid
+    ) internal {
+        BidOffer memory currentWinningBid = winningBid[
+            _targetListing.listingId
+        ];
+        uint256 currentOfferAmount = currentWinningBid.pricePerToken *
+            currentWinningBid.quantityWanted;
+        uint256 incomingOfferAmount = _incomingBid.pricePerToken *
+            _incomingBid.quantityWanted;
         address _nativeTokenWrapper = nativeTokenWrapper;
 
         // Close auction and execute sale if there's a buyout price and incoming offer amount is buyout price.
         if (
             _targetListing.buyoutPricePerToken > 0 &&
-            incomingOfferAmount >= _targetListing.buyoutPricePerToken * _targetListing.quantity
+            incomingOfferAmount >=
+            _targetListing.buyoutPricePerToken * _targetListing.quantity
         ) {
             _closeAuctionForBidder(_targetListing, _incomingBid);
         } else {
@@ -561,7 +668,8 @@ contract MSMarketplace is
              */
             require(
                 isNewWinningBid(
-                    _targetListing.reservePricePerToken * _targetListing.quantity,
+                    _targetListing.reservePricePerToken *
+                        _targetListing.quantity,
                     currentOfferAmount,
                     incomingOfferAmount
                 ),
@@ -572,7 +680,9 @@ contract MSMarketplace is
             winningBid[_targetListing.listingId] = _incomingBid;
 
             if (_targetListing.endTime == 0) {
-                _targetListing.endTime = block.timestamp + _incomingBid.expirationTimestamp;
+                _targetListing.endTime =
+                    block.timestamp +
+                    _incomingBid.expirationTimestamp;
                 _targetListing.startTime = block.timestamp;
                 listings[_targetListing.listingId] = _targetListing;
             }
@@ -624,7 +734,9 @@ contract MSMarketplace is
             isValidNewBid = _incomingBidAmount >= _reserveAmount;
         } else {
             isValidNewBid = (_incomingBidAmount > _currentWinningBidAmount &&
-                ((_incomingBidAmount - _currentWinningBidAmount) * MAX_BPS) / _currentWinningBidAmount >= bidBufferBps);
+                ((_incomingBidAmount - _currentWinningBidAmount) * MAX_BPS) /
+                    _currentWinningBidAmount >=
+                bidBufferBps);
         }
     }
 
@@ -633,26 +745,31 @@ contract MSMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Lets an account close an auction for either the (1) winning bidder, or (2) auction creator.
-    function closeAuction(uint256 _listingId, address _closeFor)
-        external
-        override
-        nonReentrant
-        onlyExistingListing(_listingId)
-    {
+    function closeAuction(
+        uint256 _listingId,
+        address _closeFor
+    ) external override nonReentrant onlyExistingListing(_listingId) {
         Listing memory targetListing = listings[_listingId];
 
-        require(targetListing.listingType == ListingType.Auction, "not an auction.");
+        require(
+            targetListing.listingType == ListingType.Auction,
+            "not an auction."
+        );
 
         BidOffer memory targetBid = winningBid[_listingId];
 
         // Cancel auction if (1) auction hasn't started, or (2) auction doesn't have any bids.
-        bool toCancel = targetListing.startTime > block.timestamp || targetBid.offeror == address(0);
+        bool toCancel = targetListing.startTime > block.timestamp ||
+            targetBid.offeror == address(0);
 
         if (toCancel) {
             // cancel auction listing owner check
             _cancelAuction(targetListing);
         } else {
-            require(targetListing.endTime < block.timestamp, "cannot close auction before it has ended.");
+            require(
+                targetListing.endTime < block.timestamp,
+                "cannot close auction before it has ended."
+            );
 
             // No `else if` to let auction close in 1 tx when targetListing.tokenOwner == targetBid.offeror.
             if (_closeFor == targetListing.tokenOwner) {
@@ -667,18 +784,38 @@ contract MSMarketplace is
 
     /// @dev Cancels an auction.
     function _cancelAuction(Listing memory _targetListing) internal {
-        require(listings[_targetListing.listingId].tokenOwner == _msgSender(), "caller is not the listing creator.");
+        require(
+            listings[_targetListing.listingId].tokenOwner == _msgSender(),
+            "caller is not the listing creator."
+        );
 
         delete listings[_targetListing.listingId];
 
-        transferListingTokens(address(this), _targetListing.tokenOwner, _targetListing.quantity, _targetListing.assetContract, _targetListing.tokenId, _targetListing.tokenType);
+        transferListingTokens(
+            address(this),
+            _targetListing.tokenOwner,
+            _targetListing.quantity,
+            _targetListing.assetContract,
+            _targetListing.tokenId,
+            _targetListing.tokenType
+        );
 
-        emit AuctionClosed(_targetListing.listingId, _msgSender(), true, _targetListing.tokenOwner, address(0));
+        emit AuctionClosed(
+            _targetListing.listingId,
+            _msgSender(),
+            true,
+            _targetListing.tokenOwner,
+            address(0)
+        );
     }
 
     /// @dev Closes an auction for an auction creator; distributes winning bid amount to auction creator.
-    function _closeAuctionForAuctionCreator(Listing memory _targetListing, BidOffer memory _winningBid) internal {
-        uint256 payoutAmount = _winningBid.pricePerToken * _targetListing.quantity;
+    function _closeAuctionForAuctionCreator(
+        Listing memory _targetListing,
+        BidOffer memory _winningBid
+    ) internal {
+        uint256 payoutAmount = _winningBid.pricePerToken *
+            _targetListing.quantity;
 
         _targetListing.quantity = 0;
         _targetListing.endTime = block.timestamp;
@@ -687,7 +824,14 @@ contract MSMarketplace is
         _winningBid.pricePerToken = 0;
         winningBid[_targetListing.listingId] = _winningBid;
 
-        payout(address(this), _targetListing.tokenOwner, _targetListing.currency, payoutAmount, _targetListing.assetContract, _targetListing.tokenId);
+        payout(
+            address(this),
+            _targetListing.tokenOwner,
+            _targetListing.currency,
+            payoutAmount,
+            _targetListing.assetContract,
+            _targetListing.tokenId
+        );
 
         emit AuctionClosed(
             _targetListing.listingId,
@@ -699,7 +843,10 @@ contract MSMarketplace is
     }
 
     /// @dev Closes an auction for the winning bidder; distributes auction items to the winning bidder.
-    function _closeAuctionForBidder(Listing memory _targetListing, BidOffer memory _winningBid) internal {
+    function _closeAuctionForBidder(
+        Listing memory _targetListing,
+        BidOffer memory _winningBid
+    ) internal {
         uint256 quantityToSend = _winningBid.quantityWanted;
 
         _targetListing.endTime = block.timestamp;
@@ -708,7 +855,14 @@ contract MSMarketplace is
         winningBid[_targetListing.listingId] = _winningBid;
         listings[_targetListing.listingId] = _targetListing;
 
-        transferListingTokens(address(this), _winningBid.offeror, quantityToSend, _targetListing.assetContract, _targetListing.tokenId, _targetListing.tokenType);
+        transferListingTokens(
+            address(this),
+            _winningBid.offeror,
+            quantityToSend,
+            _targetListing.assetContract,
+            _targetListing.tokenId,
+            _targetListing.tokenType
+        );
 
         emit AuctionClosed(
             _targetListing.listingId,
@@ -733,9 +887,20 @@ contract MSMarketplace is
         TokenType _tokenType
     ) internal {
         if (_tokenType == TokenType.ERC1155) {
-            IERC1155Upgradeable(_nftContract).safeTransferFrom(_from, _to, _tokenId, _quantity, "");
+            IERC1155Upgradeable(_nftContract).safeTransferFrom(
+                _from,
+                _to,
+                _tokenId,
+                _quantity,
+                ""
+            );
         } else if (_tokenType == TokenType.ERC721) {
-            IERC721Upgradeable(_nftContract).safeTransferFrom(_from, _to, _tokenId, "");
+            IERC721Upgradeable(_nftContract).safeTransferFrom(
+                _from,
+                _to,
+                _tokenId,
+                ""
+            );
         }
     }
 
@@ -749,18 +914,25 @@ contract MSMarketplace is
         uint256 _tokenId
     ) internal {
         uint256 MSFeeCut = (_totalPayoutAmount * MSFeeBps) / MAX_BPS;
-        uint256 MSCommunityFeeCut = (_totalPayoutAmount * MSCommunityFeeBps) / MAX_BPS;
+        uint256 MSCommunityFeeCut = (_totalPayoutAmount * MSCommunityFeeBps) /
+            MAX_BPS;
 
         uint256 royaltyCut;
         address royaltyRecipient;
 
         // Distribute royalties. See Sushiswap's https://github.com/sushiswap/shoyu/blob/master/contracts/base/BaseExchange.sol#L296
-        try IERC2981Upgradeable(_nftContract).royaltyInfo(_tokenId, _totalPayoutAmount) returns (
-            address royaltyFeeRecipient,
-            uint256 royaltyFeeAmount
-        ) {
+        try
+            IERC2981Upgradeable(_nftContract).royaltyInfo(
+                _tokenId,
+                _totalPayoutAmount
+            )
+        returns (address royaltyFeeRecipient, uint256 royaltyFeeAmount) {
             if (royaltyFeeRecipient != address(0) && royaltyFeeAmount > 0) {
-                require(royaltyFeeAmount + MSFeeCut + MSCommunityFeeCut <= _totalPayoutAmount, "fees exceed the price");
+                require(
+                    royaltyFeeAmount + MSFeeCut + MSCommunityFeeCut <=
+                        _totalPayoutAmount,
+                    "fees exceed the price"
+                );
                 royaltyRecipient = royaltyFeeRecipient;
                 royaltyCut = royaltyFeeAmount;
             }
@@ -806,8 +978,13 @@ contract MSMarketplace is
         uint256 _currencyAmountToCheckAgainst
     ) internal view {
         require(
-            IERC20Upgradeable(_currency).balanceOf(_addrToCheck) >= _currencyAmountToCheckAgainst &&
-                IERC20Upgradeable(_currency).allowance(_addrToCheck, address(this)) >= _currencyAmountToCheckAgainst,
+            IERC20Upgradeable(_currency).balanceOf(_addrToCheck) >=
+                _currencyAmountToCheckAgainst &&
+                IERC20Upgradeable(_currency).allowance(
+                    _addrToCheck,
+                    address(this)
+                ) >=
+                _currencyAmountToCheckAgainst,
             "!BAL20"
         );
     }
@@ -825,13 +1002,25 @@ contract MSMarketplace is
 
         if (_tokenType == TokenType.ERC1155) {
             isValid =
-                IERC1155Upgradeable(_assetContract).balanceOf(_tokenOwner, _tokenId) >= _quantity &&
-                IERC1155Upgradeable(_assetContract).isApprovedForAll(_tokenOwner, market);
+                IERC1155Upgradeable(_assetContract).balanceOf(
+                    _tokenOwner,
+                    _tokenId
+                ) >=
+                _quantity &&
+                IERC1155Upgradeable(_assetContract).isApprovedForAll(
+                    _tokenOwner,
+                    market
+                );
         } else if (_tokenType == TokenType.ERC721) {
             isValid =
-                IERC721Upgradeable(_assetContract).ownerOf(_tokenId) == _tokenOwner &&
-                (IERC721Upgradeable(_assetContract).getApproved(_tokenId) == market ||
-                    IERC721Upgradeable(_assetContract).isApprovedForAll(_tokenOwner, market));
+                IERC721Upgradeable(_assetContract).ownerOf(_tokenId) ==
+                _tokenOwner &&
+                (IERC721Upgradeable(_assetContract).getApproved(_tokenId) ==
+                    market ||
+                    IERC721Upgradeable(_assetContract).isApprovedForAll(
+                        _tokenOwner,
+                        market
+                    ));
         }
 
         require(isValid, "!BALNFT");
@@ -845,16 +1034,25 @@ contract MSMarketplace is
         address _currency,
         uint256 settledTotalPrice
     ) internal {
-        require(_listing.listingType == ListingType.Direct, "cannot buy from listing.");
+        require(
+            _listing.listingType == ListingType.Direct,
+            "cannot buy from listing."
+        );
 
         // Check whether a valid quantity of listed tokens is being bought.
         require(
-            _listing.quantity > 0 && _quantityToBuy > 0 && _quantityToBuy <= _listing.quantity,
+            _listing.quantity > 0 &&
+                _quantityToBuy > 0 &&
+                _quantityToBuy <= _listing.quantity,
             "invalid amount of tokens."
         );
 
         // Check if sale is made within the listing window.
-        require(block.timestamp < _listing.endTime && block.timestamp > _listing.startTime, "not within sale window.");
+        require(
+            block.timestamp < _listing.endTime &&
+                block.timestamp > _listing.startTime,
+            "not within sale window."
+        );
 
         // Check: buyer owns and has approved sufficient currency for sale.
         if (_currency == CurrencyTransferLib.NATIVE_TOKEN) {
@@ -878,23 +1076,34 @@ contract MSMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Enforces quantity == 1 if tokenType is TokenType.ERC721.
-    function getSafeQuantity(TokenType _tokenType, uint256 _quantityToCheck)
-        internal
-        pure
-        returns (uint256 safeQuantity)
-    {
+    function getSafeQuantity(
+        TokenType _tokenType,
+        uint256 _quantityToCheck
+    ) internal pure returns (uint256 safeQuantity) {
         if (_quantityToCheck == 0) {
             safeQuantity = 0;
         } else {
-            safeQuantity = _tokenType == TokenType.ERC721 ? 1 : _quantityToCheck;
+            safeQuantity = _tokenType == TokenType.ERC721
+                ? 1
+                : _quantityToCheck;
         }
     }
 
     /// @dev Returns the interface supported by a contract.
-    function getTokenType(address _assetContract) internal view returns (TokenType tokenType) {
-        if (IERC165Upgradeable(_assetContract).supportsInterface(type(IERC1155Upgradeable).interfaceId)) {
+    function getTokenType(
+        address _assetContract
+    ) internal view returns (TokenType tokenType) {
+        if (
+            IERC165Upgradeable(_assetContract).supportsInterface(
+                type(IERC1155Upgradeable).interfaceId
+            )
+        ) {
             tokenType = TokenType.ERC1155;
-        } else if (IERC165Upgradeable(_assetContract).supportsInterface(type(IERC721Upgradeable).interfaceId)) {
+        } else if (
+            IERC165Upgradeable(_assetContract).supportsInterface(
+                type(IERC721Upgradeable).interfaceId
+            )
+        ) {
             tokenType = TokenType.ERC721;
         } else {
             revert("token must be ERC1155 or ERC721.");
@@ -916,10 +1125,10 @@ contract MSMarketplace is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Lets a contract admin update platform fee recipient and bps.
-    function setPlatformFeeInfo(address _platformFeeRecipient, uint256 _platformFeeBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setPlatformFeeInfo(
+        address _platformFeeRecipient,
+        uint256 _platformFeeBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_platformFeeBps <= MAX_BPS, "bps <= 10000.");
 
         MSFeeBps = uint64(_platformFeeBps);
@@ -928,21 +1137,27 @@ contract MSMarketplace is
         emit PlatformFeeInfoUpdated(_platformFeeRecipient, _platformFeeBps);
     }
 
-        /// @dev Lets a contract admin update platform fee recipient and bps.
-    function setMSCommunityFeeInfo(address _MSCommunityFeeRecipient, uint256 _MSCommunityFeeBps)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    /// @dev Lets a contract admin update platform fee recipient and bps.
+    function setMSCommunityFeeInfo(
+        address _MSCommunityFeeRecipient,
+        uint256 _MSCommunityFeeBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_MSCommunityFeeBps <= MAX_BPS, "bps <= 10000.");
 
         MSCommunityFeeBps = uint64(_MSCommunityFeeBps);
         MSCommunityFeeRecipient = _MSCommunityFeeRecipient;
 
-        emit MSCommunityFeeInfoUpdated(_MSCommunityFeeRecipient, _MSCommunityFeeBps);
+        emit MSCommunityFeeInfoUpdated(
+            _MSCommunityFeeRecipient,
+            _MSCommunityFeeBps
+        );
     }
 
     /// @dev Lets a contract admin set auction buffers.
-    function setAuctionBuffers(uint256 _timeBuffer, uint256 _bidBufferBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setAuctionBuffers(
+        uint256 _timeBuffer,
+        uint256 _bidBufferBps
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_bidBufferBps < MAX_BPS, "invalid BPS.");
 
         timeBuffer = uint64(_timeBuffer);
