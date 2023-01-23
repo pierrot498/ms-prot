@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { MSDropERC721 } from "../typechain";
-describe("MSDrop721V2", function() {
+describe("MSDrop721V2", function () {
   const defaultAdmin = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   const forwarder = "0x56A0113AB3b7b67c655E4a0B679A4577e7F045c0";
   const MSFee = "0x8e7Fcbe0449b0689B1d1B5107554A2BA35f7C0D3";
@@ -16,7 +16,7 @@ describe("MSDrop721V2", function() {
   let addr2: SignerWithAddress;
   let addrs: SignerWithAddress[];
   let msDrop721: MSDropERC721;
-  beforeEach(async function() {
+  beforeEach(async function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     const MSDrop721 = await ethers.getContractFactory("MSDropERC721");
     msDrop721 = await upgrades.deployProxy(
@@ -42,7 +42,7 @@ describe("MSDrop721V2", function() {
     );
   });
 
-  it("Should be able to blacklist and unblacklist", async function test() {
+  it("Should be able to whitelist and unwhitelist", async function test() {
     let claimCondition = [
       1670418429,
       10,
@@ -69,15 +69,14 @@ describe("MSDrop721V2", function() {
     let lazy = await lazyToken.wait();
 
     const token = await msDrop721.adminClaim(defaultAdmin, 1, 1);
-    //blacklist an address
-    await msDrop721.blacklist(forwarder, true);
+    //whitelist an address
+    await msDrop721.whitelist(forwarder, true);
+    await msDrop721.setApprovalForAll(forwarder, true);
+    await msDrop721.whitelist(forwarder, false);
+
     await expect(
       msDrop721.setApprovalForAll(forwarder, true)
     ).to.be.revertedWith("Address blacklisted");
-
-    await msDrop721.blacklist(forwarder, false);
-
-    await msDrop721.setApprovalForAll(forwarder, true);
   });
 
   it("Should be able to have auction on token", async function test() {
