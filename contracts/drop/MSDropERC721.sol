@@ -343,6 +343,7 @@ contract MSDropERC721 is
         return indices[i];
       }
     }
+    return 0;
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -574,9 +575,6 @@ contract MSDropERC721 is
     uint256 platformFees = (totalPrice * platformFeeBps) / MAX_BPS;
     uint256 MSCommunityFees = (totalPrice * primaryMSCommunityFeeBps) / MAX_BPS;
 
-    /* if (_currency == CurrencyTransferLib.NATIVE_TOKEN) {
-            require(msg.value == totalPrice, "must send total price.");
-        }*/
 
     CurrencyTransferLib.transferCurrency(
       _currency,
