@@ -26,7 +26,6 @@ describe("MSDrop721V2", function () {
         "MS MEMBERSHIP",
         "MSMEMBERSHIP",
         "ipfs://",
-        [forwarder],
         defaultAdmin,
         defaultAdmin,
         1000,
@@ -59,8 +58,8 @@ describe("MSDrop721V2", function () {
       10,
       "ipfs://",
       false,
+      {duration :86400,reservePrice:1000,addedTime:900},
       false,
-      0,
       [claimCondition],
       false,
       false
@@ -97,8 +96,8 @@ describe("MSDrop721V2", function () {
       10,
       "ipfs://",
       false,
+      {duration :86400,reservePrice:1000,addedTime:900},
       false,
-      0,
       [claimCondition],
       false,
       false
@@ -107,9 +106,8 @@ describe("MSDrop721V2", function () {
     const lazyToken1 = await msDrop721.lazyMint(
       11,
       "ipfss://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
       [claimCondition],
       false,
       false
@@ -131,9 +129,8 @@ describe("MSDrop721V2", function () {
     const lazyToken2 = await msDrop721.lazyMint(
       11,
       "ipfss://",
+      true,{duration :86400,reservePrice:1000,addedTime:900},
       true,
-      true,
-      1,
       [claimCondition],
       false,
       false
@@ -199,9 +196,9 @@ describe("MSDrop721V2", function () {
     const lazyToken = await msDrop721.lazyMint(
       10,
       "ipfs://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition],
       false,
       false
@@ -235,8 +232,9 @@ describe("MSDrop721V2", function () {
       10,
       "ipfs://",
       false,
+      {duration :86400,reservePrice:1000,addedTime:900},
       false,
-      0,
+      
       [claimCondition],
       false,
       false
@@ -280,9 +278,9 @@ describe("MSDrop721V2", function () {
     const lazyToken = await msDrop721.lazyMint(
       10,
       "ipfs://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition],
       false,
       false
@@ -291,9 +289,9 @@ describe("MSDrop721V2", function () {
     const lazyToken1 = await msDrop721.lazyMint(
       11,
       "ipfss://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition1],
       false,
       false
@@ -348,9 +346,9 @@ describe("MSDrop721V2", function () {
     const lazyToken = await msDrop721.lazyMint(
       10,
       "ipfs://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition],
       false,
       false
@@ -359,9 +357,9 @@ describe("MSDrop721V2", function () {
     const lazyToken1 = await msDrop721.lazyMint(
       11,
       "ipfss://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition1],
       false,
       false
@@ -404,9 +402,9 @@ describe("MSDrop721V2", function () {
     const lazyToken = await msDrop721.lazyMint(
       10,
       "ipfs://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition],
       false,
       false
@@ -438,9 +436,9 @@ describe("MSDrop721V2", function () {
     await msDrop721.lazyMint(
       11,
       "ipfs://",
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       false,
-      false,
-      0,
+      
       [claimCondition],
       false,
       true
@@ -485,9 +483,9 @@ describe("MSDrop721V2", function () {
     const lazyToken = await msDrop721.lazyMint(
       10,
       "ipfs://",
-      false,
+      false,{duration :86400,reservePrice:1000,addedTime:900},
       true,
-      0,
+      
       [claimCondition],
       false,
       false

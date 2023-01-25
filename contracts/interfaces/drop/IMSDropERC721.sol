@@ -62,6 +62,11 @@ interface IMSDropERC721 is IERC721Upgradeable, IDropClaimCondition {
         uint256 quantity;
         uint256 pricePerToken;
     }
+    struct Auction {
+        uint256 duration;
+        uint256 reservePrice;
+        uint256 addedTime;
+    }
 
     /**
      *  @notice Lets an account with `MINTER_ROLE` lazy mint 'n' NFTs.
@@ -76,8 +81,8 @@ interface IMSDropERC721 is IERC721Upgradeable, IDropClaimCondition {
         uint256 amount,
         string calldata baseURIForTokens,
         bool _isAuction,
-        bool _isPhysic,
-        uint256 _reservePrice,ClaimCondition[] calldata phases, bool resetClaimEligibility, bool
+        Auction calldata _auction,
+        bool _isPhysic,ClaimCondition[] calldata phases, bool resetClaimEligibility, bool
     ) external;
 
     function claim(

@@ -23,7 +23,6 @@ import "../extension/PrimarySale.sol";
 import "../extension/Royalty.sol";
 import "../extension/Ownable.sol";
 
-import "../openzeppelin-presets/metatx/ERC2771ContextUpgradeable.sol";
 
 import "../lib/CurrencyTransferLib.sol";
 import "../lib/MerkleProof.sol";
@@ -36,7 +35,6 @@ contract MSDropERC721 is
   PrimarySale,
   PlatformFee,
   ReentrancyGuardUpgradeable,
-  ERC2771ContextUpgradeable,
   AccessControlEnumerableUpgradeable,
   ERC721EnumerableUpgradeable,
   IMSDropERC721
@@ -80,10 +78,11 @@ contract MSDropERC721 is
 
   struct Edition {
     bool isAuction;
+    Auction auction;
     bool isPhysic;
-    uint256 reservePrice;
     ClaimConditionList claimCondition;
   }
+  
 
   struct Bid {
     uint256 price;
@@ -132,7 +131,6 @@ contract MSDropERC721 is
     string memory _name,
     string memory _symbol,
     string memory _contractURI,
-    address[] memory _trustedForwarders,
     address _saleRecipient,
     address _royaltyRecipient,
     uint128 _royaltyBps,
@@ -143,7 +141,6 @@ contract MSDropERC721 is
   ) external initializer {
     // Initialize inherited contracts, most base-like -> most derived.
     __ReentrancyGuard_init();
-    __ERC2771Context_init(_trustedForwarders);
     __ERC721_init(_name, _symbol);
 
     _setupOwner(_defaultAdmin);
@@ -220,7 +217,7 @@ contract MSDropERC721 is
     bool approved
   ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
     require(whitelisted[operator] == true, "Address blacklisted");
-    _setApprovalForAll(_msgSender(), operator, approved);
+    _setApprovalForAll(msg.sender, operator, approved);
   }
 
   /**
@@ -235,7 +232,7 @@ contract MSDropERC721 is
     require(to != owner, "ERC721: approval to current owner");
 
     require(
-      _msgSender() == owner || isApprovedForAll(owner, _msgSender()),
+      msg.sender == owner || isApprovedForAll(owner, msg.sender),
       "ERC721: approve caller is not token owner or approved for all"
     );
 
@@ -264,8 +261,8 @@ contract MSDropERC721 is
     uint256 _amount,
     string calldata _baseURIForTokens,
     bool _isAuction,
+    Auction calldata _auction,
     bool _isPhysic,
-    uint256 _reservePrice,
     ClaimCondition[] calldata _phases,
     bool _resetClaimEligibility,
     bool update
@@ -282,8 +279,8 @@ contract MSDropERC721 is
     nextTokenIdToMint = index;
     baseURI[index] = _baseURIForTokens;
     if (_isAuction) {
-      Editions[index].isAuction = _isAuction;
-      Editions[index].reservePrice = _reservePrice;
+      Editions[index].isAuction=_isAuction;
+      Editions[index].auction=_auction;
     } else {
       Editions[index].isPhysic = _isPhysic;
       setClaimConditions(index, _phases, _resetClaimEligibility);
@@ -291,12 +288,12 @@ contract MSDropERC721 is
   }
 
   function bidOnToken(uint256 tokenId) external payable nonReentrant {
-    require(isTrustedForwarder(msg.sender) || _msgSender() == tx.origin, "BOT");
+    require(msg.sender == tx.origin, "BOT");
     uint256 indice = getIndice(tokenId);
     require(Editions[indice].isAuction, "Token not auctionable");
     require(
       msg.value * 100 >= Bids[tokenId].price * 105 &&
-        msg.value >= Editions[indice].reservePrice,
+        msg.value >= Editions[indice].auction.reservePrice,
       "Not enough ETH for bidding higher"
     );
     require(
@@ -304,9 +301,9 @@ contract MSDropERC721 is
       "Auction ended"
     );
     if (Bids[tokenId].time == 0) {
-      Bids[tokenId].time = block.timestamp + 86400;
-    } else if (Bids[tokenId].time - 900 < block.timestamp) {
-      Bids[tokenId].time = Bids[tokenId].time + 900;
+      Bids[tokenId].time = block.timestamp + Editions[indice].auction.duration;
+    } else if (Bids[tokenId].time - Editions[indice].auction.addedTime < block.timestamp) {
+      Bids[tokenId].time = Bids[tokenId].time + Editions[indice].auction.addedTime;
     }
 
     if (
@@ -315,15 +312,15 @@ contract MSDropERC721 is
       payable(Bids[tokenId].owner).transfer(Bids[tokenId].price);
     }
     Bids[tokenId].price = msg.value;
-    Bids[tokenId].owner = _msgSender();
-    emit bid(_msgSender(), tokenId, msg.value);
+    Bids[tokenId].owner = msg.sender;
+    emit bid(msg.sender, tokenId, msg.value);
   }
 
   function claimBid(uint256 tokenId) external {
     require(Bids[tokenId].time < block.timestamp, "Auction not finished");
-    require(Bids[tokenId].owner == _msgSender(), "Not auction winner");
+    require(Bids[tokenId].owner == msg.sender, "Not auction winner");
     require(hasBeenMinted[tokenId] == false, "Already minted");
-    _safeMint(_msgSender(), tokenId);
+    _safeMint(msg.sender, tokenId);
     hasBeenMinted[tokenId] = true;
     // If there's a price, collect price.
     collectClaimPrice(
@@ -367,7 +364,7 @@ contract MSDropERC721 is
       tokenIdToClaim += 1;
     }
 
-    emit TokensAdminClaimed(_msgSender(), _receiver, tokenIdToClaim, _quantity);
+    emit TokensAdminClaimed(msg.sender, _receiver, tokenIdToClaim, _quantity);
   }
 
   function verifyAdminClaim(
@@ -394,7 +391,7 @@ contract MSDropERC721 is
     bytes32[] calldata _proofs,
     uint256 _proofMaxQuantityPerTransaction
   ) external payable nonReentrant {
-    require(isTrustedForwarder(msg.sender) || _msgSender() == tx.origin, "BOT");
+    require(msg.sender == tx.origin, "BOT");
     uint256 index = getIndice(_claimTokenInfos.tokenId);
     require(
       _claimTokenInfos.quantity + _claimTokenInfos.tokenId <= index,
@@ -417,7 +414,7 @@ contract MSDropERC721 is
     (bool validMerkleProof, uint256 merkleProofIndex) = verifyClaimMerkleProof(
       index,
       activeConditionId,
-      _msgSender(),
+      msg.sender,
       _claimTokenInfos.quantity,
       _proofs,
       _proofMaxQuantityPerTransaction
@@ -432,7 +429,7 @@ contract MSDropERC721 is
       bytes32(0);
     verifyClaim(
       activeConditionId,
-      _msgSender(),
+      msg.sender,
       _currency,
       toVerifyMaxQuantityPerTransaction,
       _claimTokenInfos
@@ -468,7 +465,7 @@ contract MSDropERC721 is
 
     emit TokensClaimed(
       activeConditionId,
-      _msgSender(),
+      msg.sender,
       _receiver,
       tokenIdToClaim,
       _claimTokenInfos.quantity
@@ -583,19 +580,19 @@ contract MSDropERC721 is
 
     CurrencyTransferLib.transferCurrency(
       _currency,
-      _msgSender(),
+      msg.sender,
       platformFeeRecipient,
       platformFees
     );
     CurrencyTransferLib.transferCurrency(
       _currency,
-      _msgSender(),
+      msg.sender,
       primaryMSCommunityFeeRecipient,
       MSCommunityFees
     );
     CurrencyTransferLib.transferCurrency(
       _currency,
-      _msgSender(),
+      msg.sender,
       primarySaleRecipient,
       totalPrice - (platformFees + MSCommunityFees)
     );
@@ -618,9 +615,9 @@ contract MSDropERC721 is
     // if transfer claimed tokens is called when `to != msg.sender`, it'd use msg.sender's limits.
     // behavior would be similar to `msg.sender` mint for itself, then transfer to `_to`.
     Editions[index].claimCondition.limitLastClaimTimestamp[_conditionId][
-      _msgSender()
+      msg.sender
     ] = block.timestamp;
-    walletClaimCount[_msgSender()] += _quantityBeingClaimed;
+    walletClaimCount[msg.sender] += _quantityBeingClaimed;
 
     uint256 tokenIdToClaim = _tokenId;
 
@@ -828,22 +825,22 @@ contract MSDropERC721 is
 
   /// @dev Checks whether primary sale recipient can be set in the given execution context.
   function _canSetPrimarySaleRecipient() internal view override returns (bool) {
-    return hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
   /// @dev Checks whether owner can be set in the given execution context.
   function _canSetOwner() internal view override returns (bool) {
-    return hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
   /// @dev Checks whether platform fee info can be set in the given execution context.
   function _canSetPlatformFeeInfo() internal view override returns (bool) {
-    return hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
   /// @dev Checks whether royalty info can be set in the given execution context.
   function _canSetRoyaltyInfo() internal view override returns (bool) {
-    return hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -854,7 +851,7 @@ contract MSDropERC721 is
   function burn(uint256 tokenId) public virtual {
     //solhint-disable-next-line max-line-length
     require(
-      _isApprovedOrOwner(_msgSender(), tokenId),
+      _isApprovedOrOwner(msg.sender, tokenId),
       "caller not owner nor approved"
     );
     _burn(tokenId);
@@ -876,23 +873,5 @@ contract MSDropERC721 is
     super._beforeTokenTransfer(from, to, tokenId, batchSize);
   }
 
-  function _msgSender()
-    internal
-    view
-    virtual
-    override(ContextUpgradeable, ERC2771ContextUpgradeable)
-    returns (address sender)
-  {
-    return ERC2771ContextUpgradeable._msgSender();
-  }
 
-  function _msgData()
-    internal
-    view
-    virtual
-    override(ContextUpgradeable, ERC2771ContextUpgradeable)
-    returns (bytes calldata)
-  {
-    return ERC2771ContextUpgradeable._msgData();
-  }
 }
