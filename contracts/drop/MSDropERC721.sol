@@ -295,8 +295,8 @@ contract MSDropERC721 is
     uint256 indice = getIndice(tokenId);
     require(Editions[indice].isAuction, "Token not auctionable");
     require(
-      msg.value * 100 > Bids[tokenId].price * 105 &&
-        msg.value > Editions[indice].reservePrice,
+      msg.value * 100 >= Bids[tokenId].price * 105 &&
+        msg.value >= Editions[indice].reservePrice,
       "Not enough ETH for bidding higher"
     );
     require(
@@ -307,16 +307,21 @@ contract MSDropERC721 is
       Bids[tokenId].time = block.timestamp + 86400;
     } else if (Bids[tokenId].time - 900 < block.timestamp) {
       Bids[tokenId].time = Bids[tokenId].time + 900;
-    } else {
-      payable(_msgSender()).transfer(Bids[tokenId].price);
+    }
+
+    if (
+      Bids[tokenId].owner != address(0x0000000000000000000000000000000000000000)
+    ) {
+      payable(Bids[tokenId].owner).transfer(Bids[tokenId].price);
     }
     Bids[tokenId].price = msg.value;
-    Bids[tokenId].owner = msg.sender;
-    emit bid(msg.sender, tokenId, msg.value);
+    Bids[tokenId].owner = _msgSender();
+    emit bid(_msgSender(), tokenId, msg.value);
   }
 
   function claimBid(uint256 tokenId) external {
-    require(Bids[tokenId].time < block.timestamp, "Bid not finished");
+    require(Bids[tokenId].time < block.timestamp, "Auction not finished");
+    require(Bids[tokenId].owner == _msgSender(), "Not auction winner");
     require(hasBeenMinted[tokenId] == false, "Already minted");
     _safeMint(_msgSender(), tokenId);
     hasBeenMinted[tokenId] = true;

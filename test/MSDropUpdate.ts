@@ -149,17 +149,27 @@ describe("MSDrop721V2", function () {
       msDrop721.bidOnToken(25, { value: ethers.utils.parseEther("0") })
     ).to.revertedWith("Not enough ETH for bidding higher");
 
-    await msDrop721.bidOnToken(25, { value: 1000 });
+    //should bid and get his money back
+    await msDrop721.connect(addr1).bidOnToken(25, { value: 1000})
+    let walletAddr1= await ethers.provider.getBalance(addr1.address);
 
-    //have 1000 wei on contract
+    await msDrop721.bidOnToken(25, { value: 1050 });
+
+    //addr1 get 1000 wei back
+    await expect(ethers.BigNumber.from(await ethers.provider.getBalance(addr1.address))).to.be.equal(ethers.BigNumber.from(walletAddr1).add(1000));
+
+    //have 1500 wei on contract
     await expect(
       await ethers.provider.getBalance(msDrop721.address)
-    ).to.be.equal(1000);
-    //rever if claim directly
-    await expect(msDrop721.claimBid(25)).to.revertedWith("Bid not finished");
+    ).to.be.equal(1050);
+    //revert if claim directly
+    await expect(msDrop721.claimBid(25)).to.revertedWith("Auction not finished");
 
     //wait 24 hours
     await time.increase(86400);
+
+    //addr1 is not auction winner
+    await expect(msDrop721.connect(addr1).claimBid(25)).to.revertedWith("Not auction winner");
     //claim bid
     await msDrop721.claimBid(25);
     //
