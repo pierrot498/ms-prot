@@ -23,7 +23,6 @@ import "../extension/PrimarySale.sol";
 import "../extension/Royalty.sol";
 import "../extension/Ownable.sol";
 
-
 import "../lib/CurrencyTransferLib.sol";
 import "../lib/MerkleProof.sol";
 
@@ -82,7 +81,6 @@ contract MSDropERC721 is
     bool isPhysic;
     ClaimConditionList claimCondition;
   }
-  
 
   struct Bid {
     uint256 price;
@@ -279,8 +277,9 @@ contract MSDropERC721 is
     nextTokenIdToMint = index;
     baseURI[index] = _baseURIForTokens;
     if (_isAuction) {
-      Editions[index].isAuction=_isAuction;
-      Editions[index].auction=_auction;
+      Editions[index].isPhysic = _isPhysic;
+      Editions[index].isAuction = _isAuction;
+      Editions[index].auction = _auction;
     } else {
       Editions[index].isPhysic = _isPhysic;
       setClaimConditions(index, _phases, _resetClaimEligibility);
@@ -302,8 +301,12 @@ contract MSDropERC721 is
     );
     if (Bids[tokenId].time == 0) {
       Bids[tokenId].time = block.timestamp + Editions[indice].auction.duration;
-    } else if (Bids[tokenId].time - Editions[indice].auction.addedTime < block.timestamp) {
-      Bids[tokenId].time = Bids[tokenId].time + Editions[indice].auction.addedTime;
+    } else if (
+      Bids[tokenId].time - Editions[indice].auction.addedTime < block.timestamp
+    ) {
+      Bids[tokenId].time =
+        Bids[tokenId].time +
+        Editions[indice].auction.addedTime;
     }
 
     if (
@@ -473,6 +476,15 @@ contract MSDropERC721 is
     );
   }
 
+  /*
+   * Function to withdraw collected amount during minting by the owner
+   */
+  function withdraw() public onlyOwner {
+    uint balance = address(this).balance;
+    require(balance > 0, "Balance should be more then zero");
+    payable(owner()).transfer(balance);
+  }
+
   /// @dev Lets a contract admin (account with `DEFAULT_ADMIN_ROLE`) set claim conditions.
   function setClaimConditions(
     uint256 index,
@@ -574,7 +586,6 @@ contract MSDropERC721 is
     uint256 totalPrice = _quantityToClaim * _pricePerToken;
     uint256 platformFees = (totalPrice * platformFeeBps) / MAX_BPS;
     uint256 MSCommunityFees = (totalPrice * primaryMSCommunityFeeBps) / MAX_BPS;
-
 
     CurrencyTransferLib.transferCurrency(
       _currency,
@@ -870,6 +881,4 @@ contract MSDropERC721 is
     );
     super._beforeTokenTransfer(from, to, tokenId, batchSize);
   }
-
-
 }
