@@ -270,11 +270,11 @@ contract MSDropERC721 is
     if (update == true) {
       index = _amount;
     } else {
+      nextTokenIdToMint = index;
       indices.push(index);
       //emit TokensLazyMinted(startId, startId + _amount - 1, _baseURIForTokens, royaltyRecipient);
     }
 
-    nextTokenIdToMint = index;
     baseURI[index] = _baseURIForTokens;
     if (_isAuction) {
       Editions[index].isPhysic = _isPhysic;
